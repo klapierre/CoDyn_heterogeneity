@@ -12,7 +12,8 @@ datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" # this lik
 
 # -- read in data
 # dat<-read.csv('spaceTimeInfo2.csv', row.names = 1)
-dat <- read.csv(file.path(datpath, 'spaceTimeEven.csv'), row.names = 1)
+# dat <- read.csv(file.path(datpath, 'spaceTimeEven.csv'), row.names = 1)
+ dat <- read.csv(file.path(datpath, 'spatial_temporal_heterogeneity_diversity.csv'), row.names = 1)
 
 dat<-dat[!is.na(dat$temporal_distance),] # 40 rows of NA
 
@@ -31,15 +32,6 @@ x.cov <- dat$J
 f_rand <- dat$site_project_comm
 f_rand_levels <- as.character(levels(f_rand))
 
-# -- make plotting matrix
-d.plotting<-data.frame(
-  x=x,
-  y=y,
-  f_rand=f_rand,
-  col=as.numeric(f_rand),
-  pch=as.numeric(f_rand)
-)
-
 # -- mixed models
 
 # Lmer models with hierarchical structure for the random effects
@@ -53,6 +45,31 @@ fixef(m1) # Estimate (slopes) for the fixed effects of dispersion and evenness J
 pdf("Random Effects plots m1.pdf", width = 10, height = 10)
 sjp.lmer(m1)
 dev.off(); system("open 'Random Effects plots m1.pdf' -a /Applications/Preview.app")
+
+
+## Now adding in a million covariates
+m2 <- lmer(temporal_distance ~ dispersion + J + 
+             plot_size..m2. + 
+             X..plots + 
+             spatial_extent..m2. +
+             dataset_length + 
+             time_step.y +
+             
+             (1 | site_code / project_name.x / community_type),
+           data = dat)
+summary(m2)
+ranef(m2) # Estimates for the random effects 
+fixef(m1) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
+
+pdf("Random Effects plots m1.pdf", width = 10, height = 10)
+sjp.lmer(m1)
+dev.off(); system("open 'Random Effects plots m1.pdf' -a /Applications/Preview.app")
+
+
+
+
+
+
 
 
 
