@@ -1,29 +1,28 @@
-# graphics.off()
-# windows(width=10,
-#         height=7,
-#         pointsize=10,
-#         rescale='fixed')
+# Fitting models for spatial and temporal evenness data
+# NCEAS working group in Community Dynamics Oct 2015
+# Script started by Eric Sokol
 
-# nf<-layout(matrix(c(1,2),1,2),
-#            heights=c(1,1),
-#            widths=c(3,1))
-# layout.show(nf)
+library(nlme)
+library(lme4) # for lmer
+library(sjPlot) # for plotting random effects of mixed effects models. install.packages('sjPlot',dep=T)
 
-setwd('C:\\Users\\Kim\\Dropbox\\working groups\\community dynamics working group\\CoDyn\\R files\\10_07_2015_v5')
+# setwd('C:\\Users\\Kim\\Dropbox\\working groups\\community dynamics working group\\CoDyn\\R files\\10_07_2015_v5')
+ 
+datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" # this likely will be different for different folks
 
 # -- read in data
 # dat<-read.csv('spaceTimeInfo2.csv', row.names = 1)
-dat<-read.csv('spaceTimeEven.csv', row.names = 1)
+dat <- read.csv(file.path(datpath, 'spaceTimeEven.csv'), row.names = 1)
 
-dat<-dat[!is.na(dat$temporal_distance),]
+dat<-dat[!is.na(dat$temporal_distance),] # 40 rows of NA
 
 # x is dispersion
 # y is temporal_distance
 # random factor 
 
 # -- Transform Bray dists
-dat$dispersion_asinsqrt<-asin(sqrt(dat$dispersion))
-dat$temporal_distance_asinsqrt<-asin(sqrt(dat$temporal_distance))
+dat$dispersion_asinsqrt <- asin(sqrt(dat$dispersion))
+dat$temporal_distance_asinsqrt <- asin(sqrt(dat$temporal_distance))
 
 # -- make simple vars
 y <- dat$temporal_distance
@@ -42,18 +41,36 @@ d.plotting<-data.frame(
 )
 
 # -- mixed models
-require(nlme)
+
+# Lmer models with hierarchical structure for the random effects
+m1 <- lmer(temporal_distance ~ dispersion + J + 
+           (1 | site_code / project_name / community_type),
+           data = dat)
+summary(m1)
+ranef(m1) # Estimates for the random effects 
+fixef(m1) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
+
+pdf("Random Effects plots m1.pdf", width = 10, height = 10)
+sjp.lmer(m1)
+dev.off(); system("open 'Random Effects plots m1.pdf' -a /Applications/Preview.app")
+
+
+
 mod.lm<-gls(y ~ x,
             data = dat,
             method='ML')
+
+# 
 mod.rand.slope<-lme(y ~ x,
                     random = ~ x | f_rand,
                     data = dat,
                     method='ML')
+
 mod.rand.int<-lme(y ~ x,
                   random = ~ 1 | f_rand,
                   data = dat,
                   method='ML')
+
 mod.no.fixed.rand.slope<-lme(y ~ 1,
                              random = ~ x | f_rand,
                              data = dat,
@@ -63,7 +80,6 @@ mod.rand.slope.cov<-lme(y ~ x + J,
                         random = ~ x | f_rand,
                         data = dat,
                         method='ML')
-
 
 anova.compare<-anova(mod.lm,
                      mod.rand.slope,
