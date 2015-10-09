@@ -17,6 +17,67 @@ datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" # this lik
 
 dat<-dat[!is.na(dat$temporal_distance),] # 40 rows of NA
 
+# -- mixed models
+# Lmer models with hierarchical structure for the random effects
+m1 <- lmer(temporal_distance ~ dispersion + J + 
+           (1 | site_code / project_name / community_type),
+           data = dat)
+summary(m1)
+ranef(m1) # Estimates for the random effects 
+fixef(m1) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
+
+pdf("Random Effects plots m1.pdf", width = 10, height = 10)
+sjp.lmer(m1)
+dev.off(); system("open 'Random Effects plots m1.pdf' -a /Applications/Preview.app")
+
+## Now adding in a million covariates
+m2 <- lmer(temporal_distance ~ dispersion + J + 
+             plot_size..m2. + 
+            # X..plots + 
+             spatial_extent..m2. +
+             dataset_length + 
+             time_step.y +
+             (1 | site_code / project_name.x / community_type),
+           data = dat)
+summary(m2)
+ranef(m2) # Estimates for the random effects 
+fixef(m2) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
+
+pdf("Random Effects plots m2.pdf", width = 10, height = 10)
+sjp.lmer(m2)
+dev.off(); system("open 'Random Effects plots m2.pdf' -a /Applications/Preview.app")
+
+
+m3 <- lmer(temporal_distance ~ dispersion + 
+             J + 
+             plot_size..m2. + 
+             # X..plots + 
+             spatial_extent..m2. +
+             dataset_length + 
+             time_step.y +
+             temp_C + 
+             MAP_mm +
+             S + 
+             lifespan..subannual..annual.or.longer. + 
+             succession + 
+             trophic_level..consumer..primary. + 
+            # system + 
+             broad_ecosystem_type + 
+            # ANPP..g.m2. +
+             (1 | site_code / project_name.x / community_type),
+           data = dat)
+summary(m3)
+ranef(m3) # Estimates for the random effects 
+fixef(m3) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
+
+pdf("Random Effects plots m3.pdf", width = 10, height = 10)
+sjp.lmer(m3)
+dev.off(); system("open 'Random Effects plots m3.pdf' -a /Applications/Preview.app")
+
+
+
+########## Eric code below
+
 # x is dispersion
 # y is temporal_distance
 # random factor 
@@ -31,46 +92,6 @@ x <- dat$dispersion
 x.cov <- dat$J
 f_rand <- dat$site_project_comm
 f_rand_levels <- as.character(levels(f_rand))
-
-# -- mixed models
-
-# Lmer models with hierarchical structure for the random effects
-m1 <- lmer(temporal_distance ~ dispersion + J + 
-           (1 | site_code / project_name / community_type),
-           data = dat)
-summary(m1)
-ranef(m1) # Estimates for the random effects 
-fixef(m1) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
-
-pdf("Random Effects plots m1.pdf", width = 10, height = 10)
-sjp.lmer(m1)
-dev.off(); system("open 'Random Effects plots m1.pdf' -a /Applications/Preview.app")
-
-
-## Now adding in a million covariates
-m2 <- lmer(temporal_distance ~ dispersion + J + 
-             plot_size..m2. + 
-             X..plots + 
-             spatial_extent..m2. +
-             dataset_length + 
-             time_step.y +
-             
-             (1 | site_code / project_name.x / community_type),
-           data = dat)
-summary(m2)
-ranef(m2) # Estimates for the random effects 
-fixef(m1) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
-
-pdf("Random Effects plots m1.pdf", width = 10, height = 10)
-sjp.lmer(m1)
-dev.off(); system("open 'Random Effects plots m1.pdf' -a /Applications/Preview.app")
-
-
-
-
-
-
-
 
 
 mod.lm<-gls(y ~ x,
