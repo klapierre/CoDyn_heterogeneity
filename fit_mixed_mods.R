@@ -11,16 +11,14 @@ library(sjPlot) # for plotting random effects of mixed effects models. install.p
 datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" # this likely will be different for different folks
 
 # -- read in data
-# dat<-read.csv('spaceTimeInfo2.csv', row.names = 1)
 # dat <- read.csv(file.path(datpath, 'spaceTimeEven.csv'), row.names = 1)
  dat <- read.csv(file.path(datpath, 'spatial_temporal_heterogeneity_diversity.csv'), row.names = 1)
 
 dat<-dat[!is.na(dat$temporal_distance),] # 40 rows of NA
 
-# -- mixed models
 # Lmer models with hierarchical structure for the random effects
 m1 <- lmer(temporal_distance ~ dispersion + J + 
-           (1 | site_code / project_name / community_type),
+           (1 | site_code / project_name.x / community_type),
            data = dat)
 summary(m1)
 ranef(m1) # Estimates for the random effects 
@@ -47,7 +45,6 @@ pdf("Random Effects plots m2.pdf", width = 10, height = 10)
 sjp.lmer(m2)
 dev.off(); system("open 'Random Effects plots m2.pdf' -a /Applications/Preview.app")
 
-
 m3 <- lmer(temporal_distance ~ dispersion + 
              J + 
              plot_size..m2. + 
@@ -73,6 +70,9 @@ fixef(m3) # Estimate (slopes) for the fixed effects of dispersion and evenness J
 pdf("Random Effects plots m3.pdf", width = 10, height = 10)
 sjp.lmer(m3)
 dev.off(); system("open 'Random Effects plots m3.pdf' -a /Applications/Preview.app")
+
+
+# TODO bubbleplots for Scott. Size of bubbles by 
 
 
 

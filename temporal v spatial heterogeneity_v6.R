@@ -5,13 +5,17 @@ library(gtools)
 library(plyr)
 library(grid)
 library(lme4)
+library(codyn)
 
+# If don't have codyn, try this:
 # library(drat)
 # addRepo("NCEAS")
 # install.packages("codyn")
-# library(codyn)
+ 
 
-setwd("C:\\Users\\Kim\\Dropbox\\working groups\\community dynamics working group\\CoDyn\\R files\\10_08_2015_v6")
+# setwd("C:\\Users\\Kim\\Dropbox\\working groups\\community dynamics working group\\CoDyn\\R files\\10_08_2015_v6")
+
+datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" 
 
 theme_set(theme_bw())
 theme_update(axis.title.x=element_text(size=20, vjust=-0.35), axis.text.x=element_text(size=16),
@@ -20,19 +24,19 @@ theme_update(axis.title.x=element_text(size=20, vjust=-0.35), axis.text.x=elemen
              axis.ticks.length=unit(-0.25, "cm"), axis.ticks.margin=unit(0.5, "cm"),
              panel.grid.major=element_blank(), panel.grid.minor=element_blank())
 
-###################################################################################################
-###################################################################################################
-###################################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
 
 #read in the species composition dataset
-nceas <- read.csv('NewData_NCEAS.csv')
+nceas <- read.csv(file.path(datpath, 'NewData_NCEAS.csv'))
 names(nceas)[names(nceas)=='plot'] <- 'plot_id'
 nceas2 <- subset(nceas, subset=(project_name!='NTL_PHYTOS_CORE'))
 drop <- c('broad_ecosystem_type', 'system')
 nceas3 <- nceas2[,!colnames(nceas2) %in% drop]
 
 #converge datasets - remove these datasets because they are too short or we are not allowed to use them
-converge <- read.csv("all_relcov2_08062015.csv")
+converge <- read.csv(file.path(datpath, "all_relcov2_08062015.csv"))
 finalYear <- aggregate(converge["treatment_year"], by=converge[c("site_code", "project_name", "community_type")], FUN=max)
 eightYear <- subset(finalYear, subset=(treatment_year>=8))
 drop <- c('treatment_year')
