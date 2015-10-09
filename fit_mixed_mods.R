@@ -1,20 +1,17 @@
 # Fitting models for spatial and temporal evenness data
 # NCEAS working group in Community Dynamics Oct 2015
-# Script started by Eric Sokol
+# Script started by Eric Sokol, edited by Dan Flynn and now others
 
 library(nlme)
 library(lme4) # for lmer
 library(sjPlot) # for plotting random effects of mixed effects models. install.packages('sjPlot',dep=T)
 
-# setwd('C:\\Users\\Kim\\Dropbox\\working groups\\community dynamics working group\\CoDyn\\R files\\10_07_2015_v5')
- 
-datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" # this likely will be different for different folks
+datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" # or we can do URL method per Matt
 
 # -- read in data
-# dat <- read.csv(file.path(datpath, 'spaceTimeEven.csv'), row.names = 1)
- dat <- read.csv(file.path(datpath, 'spatial_temporal_heterogeneity_diversity.csv'), row.names = 1)
+dat <- read.csv(file.path(datpath, 'spatial_temporal_heterogeneity_diversity.csv'), row.names = 1)
 
-dat<-dat[!is.na(dat$temporal_distance),] # 40 rows of NA
+dat <- dat[!is.na(dat$temporal_distance),] # 40 rows of NA
 
 # Lmer models with hierarchical structure for the random effects
 m1 <- lmer(temporal_distance ~ dispersion + J + 
