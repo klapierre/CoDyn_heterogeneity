@@ -89,7 +89,7 @@ Jmeans$siteprojcom<-as.character(with(Jmeans, paste(site_code, project_name, com
 Evenness<-merge(Jmeans, Javeout, by=c("siteprojcom","experiment_year"))
 
 ##there is a lot of variation in evenness for a year depending on how evenness is calculated
-#not quite sure what the biological relevance is here. I think when the experimental scale (method 2) is more even than the plot scale (method 1) (above line) it means the site is patchy, with different plots being dominated by different species. When, the plot scale is more even than the experiment scale (below the line) it suggests while each plot is relativley even, across the plots there is a strong dominant that is found acorss all plots, while the subspecies may be more patchy.
+#not quite sure what the biological relevance is here. I think when the experimental scale (method 2) is more even than the plot scale (method 1) (above line) it means the site is patchy, with different plots being dominated by different species. When, the plot scale is more even than the experiment scale (below the line) it suggests while each plot is relativley even, there is a strong dominant found in each plot.
 
 ggplot(Evenness, aes(x=J, y=Jave, color=site_code))+
   geom_point(size=4)+
