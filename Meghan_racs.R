@@ -100,3 +100,27 @@ ggplot(Evenness, aes(x=J, y=Jave, color=site_code))+
   ylab("J (experiment scale)")
 
          
+###Turnover
+
+#loop not working
+# totalturn <-as.data.frame(cbind(total=as.numeric(), siteprojcom=as.character()))
+# mysites<-unique(dat$site_project_comm)
+# for (i in 1:length(mysites)) {
+#   subber<-dat %>%
+#     filter(site_project_comm == mysites[2])
+#   subout <- turnover(df=subber, time.var="experiment_year", species.var="species", abundance.var="abundance")
+#   names(subout)[1]="total"
+#   subout$siteprojcomm <-unique(subber$site_project_comm)
+#   subout$experiment_year<-row.names(subout)
+#   totalturn<-rbind(totalturn, subout)
+# }
+
+
+##trouble shooting
+attempt<-dat[,c("site_project_comm", "plot_id","species","abundance", "experiment_year")]%>%
+  filter(site_project_comm=="KNZ_IRG_u"&abundance!=0)
+
+#error1
+t<-turnover(df=attempt, replicate.var = "plot_id", time.var = "experiment_year")
+#error 2
+t<-turnover(df=attempt, time.var = "experiment_year")
