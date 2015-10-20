@@ -6,6 +6,7 @@ library(ggplot2)
 library(reshape2)
 library(vegan)
 
+
 theme_set(theme_bw(20))
 
 #set path
@@ -18,7 +19,6 @@ dat <- read.csv(file.path(datpath, 'relative cover_nceas and converge_10092015.c
   gather(species, abundance, sp1:sp322) %>% #old col name is 1, and old values become 2
   #create a unique "sitesubplot" - is this the same as unid?
   mutate(sitesubplot=paste(site_code, project_name, plot_id, community_type, sep="_")) %>%
-  
   #remove any non-existent sites (ie, NAs at the end of the excel spreadsheet)
   filter(!is.na(sitesubplot)) 
 
@@ -100,27 +100,88 @@ ggplot(Evenness, aes(x=J, y=Jave, color=site_code))+
   ylab("J (experiment scale)")
 
          
-###Turnover
+###TURNOVER
+# 1 - CALCULATE TURNOVER FOR EACH PLOT AND THEN AVERAGE TURNOVER IN A YEAR. 
+# 2 - AVERAGE COVER ACORSS PLOTS AND TAKE SINGLE TURNOVER VALUE FOR A YEAR.
 
-#loop not working
-# totalturn <-as.data.frame(cbind(total=as.numeric(), siteprojcom=as.character()))
-# mysites<-unique(dat$site_project_comm)
-# for (i in 1:length(mysites)) {
-#   subber<-dat %>%
-#     filter(site_project_comm == mysites[2])
-#   subout <- turnover(df=subber, time.var="experiment_year", species.var="species", abundance.var="abundance")
-#   names(subout)[1]="total"
-#   subout$siteprojcomm <-unique(subber$site_project_comm)
-#   subout$experiment_year<-row.names(subout)
-#   totalturn<-rbind(totalturn, subout)
-# }
+#METHOD 1.
+#not working for LUQ Snails or NTL ZOO. I will just drop these for now and then have it added back in once I figure out the problem. They both get the same error.
+luq<-subset(dat, site_project_comm=="LUQ_snails_0")
+test<-turnover(luq, time.var = "experiment_year", replicate.var = "plot_id")
+#the error is:  
+#Error in mapply(FUN = f, ..., SIMPLIFY = FALSE) : 
+#zero-length inputs cannot be mixed with those of non-zero length 
 
+#proceeding with subset of data
+dat2<-subset(dat,site_project_comm!="LUQ_snails_0"&site_project_comm!="NTL_ZOO_0")
+totturn<-as.data.frame(cbind(totalt=as.numeric(), siteprojcom=as.character(), experiment_year=as.numeric()))
+mysites<-unique(dat2$site_project_comm)
 
-##trouble shooting
-attempt<-dat[,c("site_project_comm", "plot_id","species","abundance", "experiment_year")]%>%
-  filter(site_project_comm=="KNZ_IRG_u"&abundance!=0)
+for (i in 1:length(mysites)){
+  subber<-dat2%>%
+    filter(site_project_comm==mysites[i])
+  subout<-turnover(df=subber, time.var="experiment_year", replicate.var = "plot_id")
+  names(subout)[1]="totalt"
+  subout$siteprojcom<-unique(subber$site_project_comm)
+  totturn<-rbind(totturn, subout)
+}
+#average up to a single turnover number for a year
+totturn_ave<-aggregate(totalt~siteprojcom+experiment_year, mean, data=totturn)
 
-#error1
-t<-turnover(df=attempt, replicate.var = "plot_id", time.var = "experiment_year")
-#error 2
-t<-turnover(df=attempt, time.var = "experiment_year")
+###method 2. to make this compatible with other analysis, using the average abundance of a species for within a year across all plots.
+
+totalturnave <-as.data.frame(cbind(totaltave=as.numeric(), siteprojcom=as.character(), experiment_year=as.numeric()))
+mysites<-unique(ave$siteprojcom)
+for (i in 1:length(mysites)) {
+  subber<-ave %>%
+    filter(siteprojcom == mysites[i])
+  subout <- turnover(df=subber, time.var="experiment_year", species.var="species", abundance.var="abundance")
+  names(subout)[1]="totaltave"
+  subout$siteprojcom <-unique(subber$siteprojcom)
+  totalturnave<-rbind(totalturnave, subout)
+}
+#merge with other datset
+turnover_all<-merge(totturn_ave, totalturnave, by=c("siteprojcom","experiment_year"))%>%
+  separate(siteprojcom, into=c("site_code","project_name","community_type"), sep="_", remove=F)
+
+#plot
+ggplot(turnover_all, aes(x=totalt, y=totaltave, color=site_code))+
+  geom_point(size=4)+
+  geom_abline()+
+  scale_x_continuous(limits=c(0,1))+
+  scale_y_continuous(limits=c(0,1))+
+  xlab("Turnover (plot scale)")+
+  ylab("Turnover (experiment scale)")
+
+###Looking at this overtime TURNOVER
+ggplot(turnover_all, aes(x=experiment_year, y=totaltave))+
+  geom_point(size=4)+
+  scale_y_continuous(limits=c(0,1))+
+  xlab("Year")+
+  ylab("Turnover (experiment scale)")+
+  facet_wrap(~siteprojcom, ncol=7, scales="free_x")
+#Evenness
+ggplot(Evenness, aes(x=experiment_year, y=Jave))+
+  geom_point(size=4)+
+  scale_y_continuous(limits=c(0,1))+
+  xlab("Year")+
+  ylab("Evenness (experiment scale)")+
+  facet_wrap(~siteprojcom, ncol=7, scales="free_x")
+
+####going to hold off on this until we have the final dataset
+###read in other output file to expore relationships
+# output <- read.csv(file.path(datpath, 'spatial_temporal_heterogeneity_diversity.csv'), row.names = 1)%>%
+#   filter(!is.na(temporal_distance))%>%
+#   mutate(siteprojcom=paste(site_code, project_name.x, community_type, sep="_"))
+# 
+# #there is something wrong with this file, many rows are repeated, averaging up for one row for each experiment per year
+# output2<-aggregate(cbind(dispersion, temporal_distance, H, log_S, S, J)~label+site_code+experiment_year+project_name.x+community_type+siteprojcom, mean, data=output)
+# 
+# #this merge will only work with the data from Kim and I where experiment year is already a string of numbers
+# dispersion<-merge(output2, totalturn, by=c("siteprojcom", "experiment_year"))
+# 
+# #for this limited nubmer of datasets, there appears to be no relationship with turnover and spatial heterogeniety.
+# with(dispersion, plot(totalt, dispersion))
+# with(dispersion, cor.test(totalt, dispersion))
+# with(dispersion, plot(temporal_distance, dispersion))
+# with(dispersion, cor.test(temporal_distance, dispersion))
