@@ -107,7 +107,20 @@ ggplot(Evenness, aes(x=J, y=Jave, color=site_code))+
 #METHOD 1.
 #not working for LUQ Snails or NTL ZOO. I will just drop these for now and then have it added back in once I figure out the problem. They both get the same error.
 luq<-subset(dat, site_project_comm=="LUQ_snails_0")
-test<-turnover(luq, time.var = "experiment_year", replicate.var = "plot_id")
+luq2<-aggregate(abundance~experiment_year+plot_id, length, data=luq)
+luq3<-aggregate(plot_id~experiment_year, length, data=luq2)
+#years 1995-1998 have many more plots than 40.
+luqtest<-subset(dat, site_project_comm=="LUQ_snails_0"&experiment_year!=1995&experiment_year!=1996&experiment_year!=1997&experiment_year!=1998)
+test<-turnover(luqtest, time.var = "experiment_year", replicate.var = "plot_id")
+
+#is this the same problem for NTL?
+ntl<-subset(dat, site_project_comm=="NTL_ZOO_0")
+ntl2<-aggregate(abundance~experiment_year+plot_id, length, data=ntl)
+ntl3<-aggregate(plot_id~experiment_year, length, data=ntl2)
+#yes 2013.50 has an extra plot.
+ntltest<-subset(dat, site_project_comm=="NTL_ZOO_0"&experiment_year!=2013.50)
+test2<-turnover(ntltest, time.var = "experiment_year", replicate.var = "plot_id")
+
 #the error is:  
 #Error in mapply(FUN = f, ..., SIMPLIFY = FALSE) : 
 #zero-length inputs cannot be mixed with those of non-zero length 
