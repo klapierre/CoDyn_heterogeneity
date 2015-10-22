@@ -1,11 +1,11 @@
 ###Using compiled datasets to assess changes in RACs
-library(tidyr)
+library(tidyr) #mutate add a column; select choose columns; filter choose rows; group by like aggregate
 library(codyn)
 library(dplyr)
 library(ggplot2)
 library(reshape2)
 library(vegan)
-
+library(swirl)
 
 theme_set(theme_bw(20))
 
@@ -52,7 +52,7 @@ ntl2<-aggregate(abundance~site_code+project_name+community_type+year+plot_id+spe
 # #yes there are 7 plots each year
 
 #get these back with full dataset
-dat_all1<-rbind(dat2, luq3)
+dat_all1<-rbind(dat3, luq3)
 dat_all<-rbind(dat_all1, ntl2)%>%
   mutate(sitesubplot=paste(site_code, project_name, plot_id, community_type, sep="_"))
 
@@ -62,16 +62,18 @@ dat.key <- dat_all %>%
   select(site_code, year, project_name, plot_id, community_type, sitesubplot) %>%
   unique()
 
-##EVENNESS
+##Calculate three basic diversity measures, richness (S), Shannon's Diversity (H), and Evenness(J)
 
 #write a function to get J from longform data
 #requires both vegan and codyn
 J_longform<-function(df, time.var="year", species.var="species", abundance.var="abundance"){
   com.use<-codyn:::transpose_community(df, time.var, species.var, abundance.var)
-  div.out<-diversity(com.use)
-  rich.out<-specnumber(com.use)
-  J<-div.out/log(rich.out)
-  return(J)
+  H<-diversity(com.use)
+  S<-specnumber(com.use)
+  J<-H/log(S)
+  out1<-cbind(H, S)
+  output<-cbind(out1, J)
+  return(output)
 }
 
 #DOING EVENNESS 2 WAYS. 
@@ -79,13 +81,12 @@ J_longform<-function(df, time.var="year", species.var="species", abundance.var="
 # 2 - AVERAGE COVER ACORSS PLOTS AND TAKE SINGLE EVENNESS VALUE FOR A YEAR.
 
 # METHOD 1 do evenness for each plot in each year
-Jout <-as.data.frame(cbind(J=as.numeric(), sitesubplot=as.character()))
+Jout <-as.data.frame(cbind(H=as.numeric(), S=as.numeric(),J=as.numeric(), sitesubplot=as.character()))
 mysitesubplots<-unique(dat_all$sitesubplot)
 for (i in 1:length(mysitesubplots)) {
   subber<-dat_all %>%
     filter(sitesubplot == mysitesubplots[i])
   subout <- data.frame(J_longform(subber))
-  names(subout)[1]="J"
   subout$sitesubplot <-unique(subber$sitesubplot)
   subout$year<-row.names(subout)
   Jout<-rbind(Jout, subout)
@@ -96,7 +97,7 @@ Jout2 <-merge(Jout, dat.key, by=c("sitesubplot", "year"), all=T)%>%
   filter(!is.na(J)) 
 
 #calculate mean evenness for each year
-Jmeans<-aggregate(J~site_code+project_name+community_type+year, mean, data=Jout2)  
+Jmeans<-aggregate(cbind(H,S,J)~site_code+project_name+community_type+year, mean, data=Jout2)  
 
 # METHOD 2 take overall species cover across all plots and calculate a single evenness number for each year
 
@@ -109,18 +110,17 @@ ave <- dat_all %>%
   tbl_df() %>%
   filter(abundance >0) %>%
   mutate(siteprojcom=paste(site_code, project_name, community_type, sep='_'))
-#mutate add a column; select choose columns; filter choose rows; group by allow like aggregate
-install.packages("swirl")
-library(swirl)
-  
 
-sJaveout<-as.data.frame(cbind(Jave=as.numeric(), siteprojcom=as.character()))
+
+Javeout<-as.data.frame(cbind(Jave=as.numeric(), siteprojcom=as.character()))
 mysite<-unique(as.character(ave$siteprojcom))
 for (i in 1:length(mysite)){
   subber<-ave%>%
     filter(siteprojcom==mysite[i])
   subout<-data.frame(J_longform(subber))
-  names(subout)[1]="Jave"
+  names(subout)[1]="Have"
+  names(subout)[2]="Save"
+  names(subout)[3]="Jave"
   subout$siteprojcom<-unique(subber$siteprojcom)
   subout$year<-row.names(subout)
   Javeout<-rbind(Javeout, subout)
@@ -128,26 +128,46 @@ for (i in 1:length(mysite)){
 
 #merge all to a singe dataframe
 Jmeans$siteprojcom<-as.character(with(Jmeans, paste(site_code, project_name, community_type, sep="_")))
-Evenness<-merge(Jmeans, Javeout, by=c("siteprojcom","year"))
+Div_measures<-merge(Jmeans, Javeout, by=c("siteprojcom","year"))
 
 ##there is a lot of variation in evenness for a year depending on how evenness is calculated
 #not quite sure what the biological relevance is here. I think when the experimental scale (method 2) is more even than the plot scale (method 1) (above line) it means the site is patchy, with different plots being dominated by different species. When, the plot scale is more even than the experiment scale (below the line) it suggests while each plot is relativley even, there is a strong dominant found in each plot.
 
-ggplot(Evenness, aes(x=J, y=Jave, color=site_code))+
+ggplot(Div_measures, aes(x=J, y=Jave, color=site_code))+
   geom_point(size=4)+
   geom_abline()+
   scale_x_continuous(limits=c(0,1))+
   scale_y_continuous(limits=c(0,1))+
   xlab("J (plot scale)")+
   ylab("J (experiment scale)")
+ggplot(Div_measures, aes(x=H, y=Have))+
+  geom_point(size=4)+
+  geom_abline()+
+  xlab("H (plot scale)")+
+  ylab("H (experiment scale)")
+ggplot(Div_measures, aes(x=S, y=Save, color=site_code))+
+  geom_point(size=4)+
+  geom_abline()+
+  xlab("S (plot scale)")+
+  ylab("S (experiment scale)")
 
 #Evenness
-ggplot(Evenness, aes(x=year, y=Jave))+
+ggplot(Div_measures, aes(x=year, y=Jave))+
   geom_point(size=4)+
   scale_y_continuous(limits=c(0,1))+
   xlab("Year")+
   ylab("Evenness (experiment scale)")+
-  facet_wrap(~siteprojcom, ncol=7, scales="free_x")
+  facet_wrap(~siteprojcom, ncol=7, scales="free")
+ggplot(Div_measures, aes(x=year, y=Save))+
+  geom_point(size=4)+
+  xlab("Year")+
+  ylab("Richness (experiment scale)")+
+  facet_wrap(~siteprojcom, ncol=7, scales="free")
+ggplot(Div_measures, aes(x=year, y=Have))+
+  geom_point(size=4)+
+  xlab("Year")+
+  ylab("Shannon's Div (experiment scale)")+
+  facet_wrap(~siteprojcom, ncol=7, scales="free")
 
          
 ###TURNOVER
@@ -155,11 +175,9 @@ ggplot(Evenness, aes(x=year, y=Jave))+
 # 2 - AVERAGE COVER ACORSS PLOTS AND TAKE SINGLE TURNOVER VALUE FOR A YEAR.
 
 #METHOD 1.
-
-dat_all$site_project_comm<-with(dat_all,(paste(site_code,project_name, community_type, sep="_")))
+dat_all$site_project_comm<-with(dat_all, paste(site_code, project_name, community_type, sep="_"))
 totturn<-as.data.frame(cbind(totalt=as.numeric(), siteprojcom=as.character(), year=as.numeric()))
 mysites<-unique(dat_all$site_project_comm)
-
 for (i in 1:length(mysites)){
   subber<-dat_all%>%
     filter(site_project_comm==mysites[i])
@@ -168,23 +186,24 @@ for (i in 1:length(mysites)){
   subout$siteprojcom<-unique(subber$site_project_comm)
   totturn<-rbind(totturn, subout)
 }
+
 #average up to a single turnover number for a year
-totturn_ave<-aggregate(totalt~siteprojcom+experiment_year, mean, data=totturn)
+totturn_ave<-aggregate(totalt~siteprojcom+year, mean, data=totturn)
 
 ###method 2. to make this compatible with other analysis, using the average abundance of a species for within a year across all plots.
 
-totalturnave <-as.data.frame(cbind(totaltave=as.numeric(), siteprojcom=as.character(), experiment_year=as.numeric()))
+totalturnave <-as.data.frame(cbind(totaltave=as.numeric(), siteprojcom=as.character(), year=as.numeric()))
 mysites<-unique(ave$siteprojcom)
 for (i in 1:length(mysites)) {
   subber<-ave %>%
     filter(siteprojcom == mysites[i])
-  subout <- turnover(df=subber, time.var="experiment_year", species.var="species", abundance.var="abundance")
+  subout <- turnover(df=subber, species.var="species", abundance.var="abundance")
   names(subout)[1]="totaltave"
   subout$siteprojcom <-unique(subber$siteprojcom)
   totalturnave<-rbind(totalturnave, subout)
 }
 #merge with other datset
-turnover_all<-merge(totturn_ave, totalturnave, by=c("siteprojcom","experiment_year"))%>%
+turnover_all<-merge(totturn_ave, totalturnave, by=c("siteprojcom","year"))%>%
   separate(siteprojcom, into=c("site_code","project_name","community_type"), sep="_", remove=F)
 
 #plot
@@ -197,13 +216,12 @@ ggplot(turnover_all, aes(x=totalt, y=totaltave, color=site_code))+
   ylab("Turnover (experiment scale)")
 
 ###Looking at this overtime TURNOVER
-ggplot(turnover_all, aes(x=experiment_year, y=totaltave))+
+ggplot(turnover_all, aes(x=year, y=totaltave))+
   geom_point(size=4)+
   scale_y_continuous(limits=c(0,1))+
   xlab("Year")+
   ylab("Turnover (experiment scale)")+
-  facet_wrap(~siteprojcom, ncol=7, scales="free_x")
-
+  facet_wrap(~siteprojcom, ncol=7, scales="free")
 
 ####going to hold off on this until we have the final dataset
 ###read in other output file to expore relationships
