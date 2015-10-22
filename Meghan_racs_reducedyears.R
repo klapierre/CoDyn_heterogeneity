@@ -26,20 +26,20 @@ dat <- read.csv(file.path(datpath, 'relative cover_nceas and converge_10092015.c
 #1 do do not want more than 1 time step per year for all the aquatic data.
 dat$year<-trunc(dat$experiment_year)
 dat2<-aggregate(abundance~site_code+project_name+community_type+year+plot_id+species, max, data=dat)
-
-#2 need to drop extra replicated of LUQ_snails_0 and NTL_ZOO_0
-#first deleting out LUQ_snails and NTL ZOO
+#2 need to drop extra LUQ_snails_0 and NTL_ZOO_0
 dat3<-subset(dat2, project_name!="snails"&project_name!="ZOO")
 
 #fix luq snails
 luq<-subset(dat2, project_name=="snails")
-luq2<-subset(luq, year==1992)
-luqplots<-as.data.frame(unique(luq2$plot_id))
-names(luqplots)[1]<-"plot_id"
-luq3<-merge(luq, luqplots, by="plot_id")
+luq2<-luq%>%
+  filter(year==1992)%>%
+  tbl_df()%>%
+  select(plot_id)%>%
+  unique()
+luq3<-merge(luq, luq2, by="plot_id")
 #check for only 40 plots/year
-# luq4<-aggregate(abundance~year+plot_id, length, data=luq3)
-# luq5<-aggregate(plot_id~year, length, data=luq4)
+#luq4<-aggregate(abundance~year+plot_id, length, data=luq3)
+#luq5<-aggregate(plot_id~year, length, data=luq4)
 #yes, there are now only 40 plots for all years.
 
 # fix NTL Zoo, it is typo in 2013 TR was entered as also Tr.
@@ -101,10 +101,20 @@ Jmeans<-aggregate(J~site_code+project_name+community_type+year, mean, data=Jout2
 # METHOD 2 take overall species cover across all plots and calculate a single evenness number for each year
 
 #get average cover of each species in a year
-ave<-aggregate(abundance~site_code+project_name+community_type+species+year, mean, data=dat_all)
-ave$siteprojcom<-as.character(with(ave,paste(site_code, project_name, community_type, sep='_')))
-                                   
-Javeout<-as.data.frame(cbind(Jave=as.numeric(), siteprojcom=as.character()))
+ave <- dat_all %>%
+  tbl_df() %>%
+  group_by(site_code, project_name, community_type, species, year) %>%
+  summarize(abundance=mean(abundance)) %>%
+  #get ride of the grouping 
+  tbl_df() %>%
+  filter(abundance >0) %>%
+  mutate(siteprojcom=paste(site_code, project_name, community_type, sep='_'))
+#mutate add a column; select choose columns; filter choose rows; group by allow like aggregate
+install.packages("swirl")
+library(swirl)
+  
+
+sJaveout<-as.data.frame(cbind(Jave=as.numeric(), siteprojcom=as.character()))
 mysite<-unique(as.character(ave$siteprojcom))
 for (i in 1:length(mysite)){
   subber<-ave%>%
