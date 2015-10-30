@@ -1,5 +1,8 @@
 setwd("~/Dropbox/CoDyn/Import")
 
+datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" # For writing out
+
+
 library(gtools)
 library(reshape2)
 
@@ -97,8 +100,10 @@ LUQ_snails$plot<-as.factor(LUQ_snails$plot)
 
 OND_PHYTOS<-read.csv("OND_PHYTOS.csv")
 OND_PHYTOS$plot<-as.factor(OND_PHYTOS$plot)
-cap_arthropods_wide<-read.csv("cap_arthropods_wide.csv")
-cap_arthropods_wide$plot<-as.factor(cap_arthropods_wide$plot)
+
+# DF: this file not in Import any longer
+#cap_arthropods_wide<-read.csv("cap_arthropods_wide.csv")
+#cap_arthropods_wide$plot<-as.factor(cap_arthropods_wide$plot)
 
 #merge all datasets
 
@@ -134,7 +139,9 @@ combineTerS<-smartbind(combineTerP, combineTerQ , fill=0)
 
 newdata<-smartbind(combineTerR, combineTerS , fill=0)
 
-newdata2<-smartbind(OND_PHYTOS, cap_arthropods_wide , fill=0)
+newdata2<-smartbind(OND_PHYTOS
+                    #, cap_arthropods_wide # DF took out of code
+                    , fill=0)
 
 combine<-smartbind(combineAqua, combineTer1, combineTer2, combineTer3, newdata, newdata2, fill=0)
 colnames(combine)
@@ -142,5 +149,5 @@ colnames(combine)
 levels(as.factor(combine$community_type))
 levels(as.factor(combineTer2$community_type))
 
-write.csv(combine, "NewData_NCEAS.csv")
+write.csv(combine, file.path(datpath, "NewData_NCEAS.csv"), row.names = F)
 

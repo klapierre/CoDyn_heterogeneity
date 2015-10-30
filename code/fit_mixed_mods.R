@@ -21,6 +21,7 @@ summary(m1)
 ranef(m1) # Estimates for the random effects 
 fixef(m1) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
 
+# Plotting the random effects. Since this model is intercept only, we can interpret these easily as the differences betwen community types or project names or sites in mean temporal distance.
 pdf("Random Effects plots m1.pdf", width = 10, height = 10)
 sjp.lmer(m1)
 dev.off(); system("open 'Random Effects plots m1.pdf' -a /Applications/Preview.app")

@@ -50,34 +50,36 @@ converge2 <- subset(converge2a, subset=(site_project!='ANG_watering' & site_proj
 drop <- c('site_project', 'site_project_comm')
 converge3 <- converge2[,!colnames(converge2) %in% drop]
 
-
 #merge nceas data and converge data
+nceas3$plot_id <- as.character(nceas3$plot_id)# for merging
+
 alldata <- smartbind(nceas3, converge3)
-alldata[is.na(alldata)] <- 0
+alldata[is.na(alldata)] <- 0 
 alldata$site_project <- with(alldata, paste(site_code, project_name, sep='_'))
 alldata$site_project_comm <- with(alldata, paste(site_code, project_name, community_type, sep='_'))
-
 
 #get relative cover
 
 #make a unique ID for each plot in the final dataset by combining id, project name, site name
 alldata$unid2<-paste(alldata$plot_id, alldata$community_type, alldata$project_name, alldata$site_code, alldata$experiment_year, sep="_")
 
-#make a dataframe with only the informational data
-information<-alldata[,c(1:7,395:404)]
+#make a dataframe with only the informational data. Now calling by column name instead of number
+
+information<-alldata[,c('site_code', 'project_name', 'experiment_year', 'plot_id', 'data_type', 'community_type',
+                          'unid', 'id', 'plot_mani', 'calendar_year', 'treatment_year', 'block', 'treatment', 'plot_id1', 'site_project', 'site_project_comm', 'unid2')]
 
 #make a dataframe with only the species data
-species<-alldata[,c(8:394,404)]
+species<-alldata[,c(names(alldata)[grep("^sp", names(alldata))],'unid2')]
 
 #transpose to get species in rows
-melt<-melt(species,id="unid2")
-head(melt)
+melted<-melt(species,id="unid2")
+head(melted)
 
 #get sum of cover for each plot
-sumcover<-aggregate(value~unid2, FUN="sum", data=melt)
+sumcover<-aggregate(value~unid2, FUN="sum", data=melted)
 
 #merge species data and sum of cover by plot
-relcov<-merge(sumcover, melt, by="unid2")
+relcov<-merge(sumcover, melted, by="unid2") # ! SLOW ! 
 
 #get only plots with some cover > 0 (for some reason lots of plots have cover=0)
 relcov_a<-subset(relcov, subset=(value.x!=0))
@@ -97,7 +99,7 @@ relcov3<-dcast(relcov2a, unid2 ~ variable)
 #merge the species data back together with the informational data
 relcov4<-merge(information, relcov3, by="unid2")
 
-write.csv(relcov4, 'relative cover_nceas and converge_10082015.csv')
+write.csv(relcov4, 'relative cover_nceas and converge_10082015.csv', row.names=F)
 alldata3 <- read.csv('relative cover_nceas and converge_10082015.csv')
 
 #make year as factor
@@ -120,14 +122,18 @@ alldata2 <- newYear
 alldata2$label=as.factor(paste(alldata2$site_code, alldata2$project_name, alldata2$community_type, alldata2$experiment_year, sep="::"))
 
 #makes a dataframe with just the experiment descriptor variables (e.g., plot_mani, factors manipulated, etc)
+
+# DF: what is species_num from? not an R object. Should this be the sum from alldata2? 
+
 expInfo <- ddply(alldata2, c("site_code", "project_name", "community_type", "data_type"), summarise,
                  species_num=mean(species_num))
 names(expInfo) <- sub("^dist$", "disturbance", names(expInfo))
 expInfo$label=as.factor(paste(expInfo$site_code, expInfo$project_name, expInfo$community_type, sep="::"))
 
 #import experiment ANPP and MAP data
-expSiteInfo<-read.csv("Experiment_Info.csv")
+expSiteInfo<-read.csv(file.path(datpath, "Experiment_Info.csv"))
 expSiteInfo$site_project_comm <- with(expSiteInfo, paste(site_code, project_name, community_type, sep='_'))
+
 
 expSiteInfoYear <- ddply(alldata2, c('site_code', 'project_name', 'community_type', 'experiment_year', 'calendar_year', 'label'), summarise,
                          species_num = mean(species_num))
