@@ -69,6 +69,21 @@ pdf("Random Effects plots m3.pdf", width = 10, height = 10)
 sjp.lmer(m3)
 dev.off(); system("open 'Random Effects plots m3.pdf' -a /Applications/Preview.app")
 
+# Random slopes as per Eric's models below
+
+
+m22 <- lmer(temporal_distance ~ dispersion + J + 
+             plot_size..m2. + 
+             # X..plots + 
+             spatial_extent..m2. +
+             dataset_length + 
+             time_step.y +
+             (dispersion | site_code / project_name.x / community_type),
+           data = dat)
+summary(m22)
+ranef(m22) # Estimates for the random effects 
+fixef(m2) # Estimate (slopes) for
+
 
 # TODO bubbleplots for Scott. Size of bubbles by 
 
@@ -125,8 +140,8 @@ anova.compare<-anova(mod.lm,
 anova.compare.cov<-anova(mod.rand.slope, mod.rand.slope.cov)
 
 # -- write anova results to .csv file
-write.csv(anova.compare, file='TABLE_anova_random_effects.csv')
-write.csv(anova.compare.cov, file='TABLE_anova_covariate.csv')
+write.csv(anova.compare, file='TABLE_anova_random_effects.csv', row.names = F)
+write.csv(anova.compare.cov, file='TABLE_anova_covariate.csv', row.names = F)
 
 
 
