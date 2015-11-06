@@ -33,13 +33,14 @@ dat <-rawdat %>%
   #remove any non-existent sites (ie, NAs at the end of the excel spreadsheet)
   filter(!is.na(sitesubplot)) 
 
-
+#make a dataframe of all the plots ever sampled, even if nothing was in them at the time
 sampled_plots <-rawdat %>%
   select(site_code, project_name, plot_id, community_type, experiment_year) %>%
   unique() %>%
-  mutate(sitesubplot=paste(site_code, project_name, plot_id, community_type, sep="_"))
+  mutate(sitesubplot=paste(site_code, project_name, plot_id, community_type, sep="_")) %>%
+  tbl_df()
 
-
+#merge that into dat so that years aren't dropped for complete species absences
 dat2<-merge(dat, sampled_plots, id=c("sitesubplot", "experiment_year"), all.y=T)
 
 # a function to fill in 0s for species present in the plot but not that year
