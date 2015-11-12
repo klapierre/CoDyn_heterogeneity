@@ -6,6 +6,8 @@ library(plyr)
 library(grid)
 library(lme4)
 library(codyn)
+library(tidyr)
+library(dplyr)
 
 # If don't have codyn, try this:
 # library(drat)
@@ -15,7 +17,7 @@ library(codyn)
 
 # setwd("C:\\Users\\Kim\\Dropbox\\working groups\\community dynamics working group\\CoDyn\\R files\\10_08_2015_v6")
 
-datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" 
+datpath = "~/Dropbox/CoDyn/R files/11_06_2015_v7" 
 
 theme_set(theme_bw())
 theme_update(axis.title.x=element_text(size=20, vjust=-0.35), axis.text.x=element_text(size=16),
@@ -28,12 +30,19 @@ theme_update(axis.title.x=element_text(size=20, vjust=-0.35), axis.text.x=elemen
 ####################################################################################
 ####################################################################################
 
+
+
+##READ ME: ALL OF THIS CAN BE SKIPPED. THIS IS TO GET RELATIVE ABUNDANCE OF ALL SPECIES. SCROLL DOWN TO THE START HERE
+
+
+
+
+
 #read in the species composition dataset
-nceas <- read.csv(file.path(datpath, 'NewData_NCEAS.csv'))
+nceas <- read.csv(file.path(datpath, 'NewData_NCEAS_Nov11.csv'))%>%
+  select(-X)
 names(nceas)[names(nceas)=='plot'] <- 'plot_id'
-nceas2 <- subset(nceas, subset=(project_name!='NTL_PHYTOS_CORE'))
-drop <- c('broad_ecosystem_type', 'system')
-nceas3 <- nceas2[,!colnames(nceas2) %in% drop]
+nceas$plot_id <- as.character(nceas$plot_id)# for merging
 
 #converge datasets - remove these datasets because they are too short or we are not allowed to use them
 converge <- read.csv(file.path(datpath, "all_relcov2_08062015.csv"))
@@ -46,61 +55,103 @@ eightYearControl <- subset(eightYearData, subset=(plot_mani==0))
 eightYearControl$site_project <- paste(eightYearControl$site_code, eightYearControl$project_name, sep='_')
 eightYearControl$site_project_comm <- with(eightYearControl, paste(site_code, project_name, community_type, sep='_'))
 converge2a <- subset(eightYearControl, subset=(site_project_comm!='CDR_e001_D'))
-converge2 <- subset(converge2a, subset=(site_project!='ANG_watering' & site_project!='CAU_RMAPC' & site_project!='dcgs_gap' & site_project!='Finse_WarmNut' & site_project!='ORNL_FACE' & site_project!='ARC_MNT' & site_project!='ARC_MAT2_1996' & site_project!='SGS_ESA' & site_project!='KNZ_BGP' & site_project!='NWT_246Nfert' & site_project!='KNZ_RHPs' & site_project!='CDR_BioCON' & site_project!='KUFS_E6' & site_project!='China_Qiang' & site_project!='ASGA_Exp1' & site_project!='ARC_MAT2' & site_project!='ASGA_clonal' & site_project!='DL_NSFC' & site_project!='CDR_e002'))
-drop <- c('site_project', 'site_project_comm')
-converge3 <- converge2[,!colnames(converge2) %in% drop]
+converge2 <- subset(converge2a, subset=(site_project!='ANG_watering' & site_project!='CAU_RMAPC' & site_project!='dcgs_gap' & site_project!='Finse_WarmNut' & site_project!='ORNL_FACE' & site_project!='ARC_MNT' & site_project!='ARC_MAT2_1996' & site_project!='SGS_ESA' & site_project!='KNZ_BGP' & site_project!='NWT_246Nfert' & site_project!='KNZ_RHPs' & site_project!='CDR_BioCON' & site_project!='KUFS_E6' & site_project!='China_Qiang' & site_project!='ASGA_Exp1' & site_project!='ARC_MAT2' & site_project!='ASGA_clonal' & site_project!='DL_NSFC' & site_project!='CDR_e002'))%>%
+  select(-site_project, -site_project_comm, -X, -unid, -id, -nutrients, -light, -carbon, -water, -other_manipulation, -num_manipulations, -clip,-temp, -precip, -plot_mani, -calendar_year, -treatment_year, -block, -treatment, -plot_id1, -data_type, -species_num, -n, -p, -k, -herb_removal, -burn, -true_num_manipulations, -c, -plant_mani, -true_plot_mani, -lime, -other_nut, -cessation, -dist, -precip_vari, -precip_vari_season, -patchiness, -other_manipulations, -l, -fungicide, -soil_carbon, -grazed, -soil_depth, -precip_season)%>%
+  gather(species, abundance, sp1:sp232)
 
 #merge nceas data and converge data
-nceas3$plot_id <- as.character(nceas3$plot_id)# for merging
-
-alldata <- smartbind(nceas3, converge3)
+alldata <- rbind(nceas, converge2)%>%
+  mutate(site_project=paste(site_code, project_name, sep='_'))%>%
+  mutate(site_project_comm =paste(site_code, project_name, community_type, sep='_'))%>%
+  mutate(unid=paste(plot_id, community_type, project_name, site_code, experiment_year, sep="_"))
 alldata[is.na(alldata)] <- 0 
-alldata$site_project <- with(alldata, paste(site_code, project_name, sep='_'))
-alldata$site_project_comm <- with(alldata, paste(site_code, project_name, community_type, sep='_'))
 
 #get relative cover
 
-#make a unique ID for each plot in the final dataset by combining id, project name, site name
-alldata$unid2<-paste(alldata$plot_id, alldata$community_type, alldata$project_name, alldata$site_code, alldata$experiment_year, sep="_")
+#make a dataframe with only the species data and with other information
+information<-alldata%>%
+  select(experiment_year, plot_id, site_code, project_name, community_type, site_project, site_project_comm, unid)%>%
+  unique()
+#get species list
+species<-alldata%>%
+  select(unid, species, abundance)
 
-#make a dataframe with only the informational data. Now calling by column name instead of number
-
-information<-alldata[,c('site_code', 'project_name', 'experiment_year', 'plot_id', 'data_type', 'community_type',
-                          'unid', 'id', 'plot_mani', 'calendar_year', 'treatment_year', 'block', 'treatment', 'plot_id1', 'site_project', 'site_project_comm', 'unid2')]
-
-#make a dataframe with only the species data
-species<-alldata[,c(names(alldata)[grep("^sp", names(alldata))],'unid2')]
-
-#transpose to get species in rows
-melted<-melt(species,id="unid2")
-head(melted)
 
 #get sum of cover for each plot
-sumcover<-aggregate(value~unid2, FUN="sum", data=melted)
+sumcover<-alldata%>%
+  select(unid, species, abundance)%>%
+  tbl_df()%>%
+  group_by(unid)%>%
+  summarize(totcov=sum(abundance))
 
 #merge species data and sum of cover by plot
-relcov<-merge(sumcover, melted, by="unid2") # ! SLOW ! 
+relcov<-merge(sumcover, species, by="unid") # ! SLOW ! 
 
-#get only plots with some cover > 0 (for some reason lots of plots have cover=0)
-relcov_a<-subset(relcov, subset=(value.x!=0))
-relcov_b<-subset(relcov, subset=(value.x==0))
+#get only plots with some cover > 0 (a few plots have cover=0 and the ones that do make sense biologically)
+relcov_a<-subset(relcov, subset=(totcov!=0))%>%
+  mutate(relcov=abundance/totcov)%>%#calculate relative cover for each species in each plot
+  select(unid, species, relcov)%>%
+  filter(relcov!=0)
 
-#calculate relative cover for each species in each plot
-relcov_a$relcov<-relcov_a$value.y/relcov_a$value.x
+#sally and meghan decided to drop plots with no species (tot cov=0) because.  
+# relcov_b<-subset(relcov, subset=(totcov==0))%>%
+#   mutate(relcov=0)%>%
+#   select(unid, species, relcov)
+#relcov_all<-rbind(relcov_a, relcov_b)
 
-#delete the old cover data and sum of cover data
-relcov2a<-relcov_a[,-c(2,4)]
+###fixing problems with LUQ snails and #fix luq snails and NTL zoo.
+fix<-merge(relcov_a, information, by="unid")
+fix2<-subset(fix, project_name!="snails"&project_name!="ZOO")
 
-# relcov2 <- aggregate(relcov ~ unid2 + variable, mean, data=relcov2a)
+luq<-subset(fix, project_name=="snails")
+luq2<-luq%>%
+  filter(experiment_year==1992)%>%
+  tbl_df()%>%
+  select(plot_id)%>%
+  unique()
+luq3<-merge(luq, luq2, by="plot_id")
+#check for only 40 plots/year
+# luq4<-aggregate(relcov~experiment_year+plot_id, length, data=luq3)
+# luq5<-aggregate(plot_id~experiment_year, length, data=luq4)
+#yes, there are now only 40 plots for all years.
+
+# fix NTL Zoo, it is typo in 2013 TR was entered as also Tr.
+ntl<-subset(fix, project_name=="ZOO")
+ntl$plot_id<-toupper(ntl$plot_id)
+ntl2<-aggregate(relcov~unid+site_code+project_name+community_type+experiment_year+plot_id+site_project+site_project_comm+species, max, data=ntl)
+# #check for 7 plots each year
+#  ntl3<-aggregate(relcov~experiment_year+plot_id, length, data=ntl2)
+#  ntl4<-aggregate(plot_id~experiment_year, length, data=ntl3)
+# #yes there are 7 plots each year
+
+#get these back with full dataset
+dat_all1<-rbind(fix2, luq3)
+dat_all<-rbind(dat_all1, ntl2)%>%
+  select(unid, relcov, species)
+#where are the duplicate plots GROUCH!
+# test<-aggregate(relcov~unid+variable, length, data=dat_all)
+# tests<-subset(test, relcov>1)
 
 #re-transpose to get species as columns
-relcov3<-dcast(relcov2a, unid2 ~ variable)
+relcov3<-dcast(dat_all, unid ~ species, value.var="relcov")
+relcov3[is.na(relcov3)]<-0
 
 #merge the species data back together with the informational data
-relcov4<-merge(information, relcov3, by="unid2")
+relcov4<-merge(information, relcov3, by="unid")
 
-write.csv(relcov4, 'relative cover_nceas and converge_10082015.csv', row.names=F)
-alldata3 <- read.csv('relative cover_nceas and converge_10082015.csv')
+write.csv(relcov4, '~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_11112015.csv', row.names=F)
+
+
+###################################
+##################################
+######
+#######start from here!
+#######
+##################################
+###################################
+
+
+alldata3 <- read.csv('~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_11112015.csv')
 
 #make year as factor
 expt.list=data.frame(expt=levels(droplevels(alldata3$site_project_comm)))
@@ -125,49 +176,44 @@ alldata2$label=as.factor(paste(alldata2$site_code, alldata2$project_name, alldat
 
 # DF: what is species_num from? not an R object. Should this be the sum from alldata2? 
 
-expInfo <- ddply(alldata2, c("site_code", "project_name", "community_type", "data_type"), summarise,
-                 species_num=mean(species_num))
-names(expInfo) <- sub("^dist$", "disturbance", names(expInfo))
-expInfo$label=as.factor(paste(expInfo$site_code, expInfo$project_name, expInfo$community_type, sep="::"))
+expInfo <- alldata2 %>%
+  select(site_code, project_name, community_type) %>%
+  unique()%>%
+  mutate(label=as.factor(paste(site_code, project_name, community_type, sep="::")))
 
-#import experiment ANPP and MAP data
-expSiteInfo<-read.csv(file.path(datpath, "Experiment_Info.csv"))
-expSiteInfo$site_project_comm <- with(expSiteInfo, paste(site_code, project_name, community_type, sep='_'))
-
-
-expSiteInfoYear <- ddply(alldata2, c('site_code', 'project_name', 'community_type', 'experiment_year', 'calendar_year', 'label'), summarise,
-                         species_num = mean(species_num))
+# #import experiment ANPP and MAP data
+# expSiteInfo<-read.csv(file.path(datpath, "Experiment_Info.csv"))%>%
+#   mutate(site_project_comm=paste(site_code, project_name, community_type, sep='_'))
+# 
+# 
+# 
+# expSiteInfoYear <- ddply(alldata2, c('site_code', 'project_name', 'community_type', 'experiment_year', 'calendar_year', 'label'), summarise,
+#                          species_num = mean(species_num))
 
 
 #########################
 #calculate spatial heterogeneity for each site, project, community, and year
 
-#these datasets are redundant
-dataSubseta <- subset(alldata2, subset=(site_project_comm!='NTL_NTL_PHYTOS_JULY_0' & site_project_comm!='NTL_core_annual_0' & site_project_comm!='NTL_core_spring_0' & site_project_comm!='NTL_core_summer_0' & site_project_comm!='NTL_core_fall_0' & site_project_comm!='NTL_core_winter_0'))
-
-#this datasets are broken
-dataSubset <- subset(dataSubseta, subset=(site_project_comm!='OND_OND_INVERTS_0'))
-
 #makes a new dataframe with just the label; here, expt.year includes all site, project, community, exp yr, trt yr designations
-expt.year.list=data.frame(expt.year=levels(droplevels(dataSubset$label))) 
+expt.year.list=data.frame(expt.year=levels(droplevels(alldata2$label))) 
 
 #makes an empty dataframe
 spatialHetero=data.frame(row.names=1) 
 
 #be sure to change which columns are species columns!!
-colnames(dataSubset) 
+colnames(alldata2) 
 
 #get bray curtis dissimilarity values for each site, project, community, and year
 for(i in 1:length(expt.year.list$expt.year)) {
   
   #create a dataset for each unique year, experiment combination
-  dataset=dataSubset[dataSubset$label==as.character(expt.year.list$expt.year[i]),]
+  dataset=alldata2[alldata2$label==as.character(expt.year.list$expt.year[i]),]
   
   #subset only columns with species data in them
-  species=dataset[,19:405]
+  species=dataset[,9:399]
   
   #calculate bray-curtis dissimilarity
-  bc=vegdist(species, method='bray')
+  bc=vegdist(species, method='bray',diag=F, upper=TRUE)
   
 #   #calculate distances to centroid (i.e., dispersion)
 #   disp=betadisper(bc, dataset$treatment, type="centroid")
@@ -179,14 +225,14 @@ for(i in 1:length(expt.year.list$expt.year)) {
   bc.d$names <- row.names(bc.d)
 
   #get matrix in long form
-  bcSpatialMelt <- melt(bc.d, id='names', variable.name='plot', value.name='spatial_distance')
-
-  bcSpatialMelt2 <- subset(bcSpatialMelt, subset=(spatial_distance!=0))
+  #this has all combinantions 2x, which will not affect average but could affect other calcualtions like standard error b/c of different n
+  bcSpatialMelt <- melt(bc.d, id='names', variable.name='plot', value.name='spatial_distance')%>%
+    filter(names!=plot)
 
   #collecting and labeling distances
   dispersion=data.frame(data.frame(expt.year=expt.year.list$expt.year[i], 
-                                 names=bcSpatialMelt2$names,
-                                 spatial_distance=bcSpatialMelt2$spatial_distance))
+                                 names=bcSpatialMelt$names,
+                                 spatial_distance=bcSpatialMelt$spatial_distance))
     
   #pasting dispersions into the dataframe made for this analysis
   spatialHetero=rbind(dispersion, spatialHetero)
@@ -194,21 +240,25 @@ for(i in 1:length(expt.year.list$expt.year)) {
 }
 
 ###mean spatial heterogeneity for a site in a year across all reps (i.e., mean across all bray-curtis of each rep to all other reps)
-spatialHeteroMean <- ddply(spatialHetero, c('expt.year'), summarise,
-                           dispersion=mean(spatial_distance))
-names(spatialHeteroMean)[names(spatialHeteroMean)=="expt.year"] <- "label"
-spatialHeteroInfo <- merge(spatialHeteroMean, expSiteInfoYear, by=c('label'))
-spatialHeteroInfo$site_project_comm <- with(spatialHeteroInfo, paste(site_code, project_name, community_type, sep='_'))
+spatialHeteroInfo<- ddply(spatialHetero, c('expt.year'), summarise,
+                           dispersion=mean(spatial_distance))%>%
+  separate(expt.year, into=c("site_code", "project_name", "community_type", "experiment_year"), sep="::")%>%
+  mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))
 
 
 ####################################
 #calculate temporal heterogeneity for each site, project, and community
 
 #melt and reshape data to get means of all species
-drop <- c('X', 'unid', 'id', 'plot_mani', 'treatment_year', 'treatment', 'species_num', 'site_project_comm', 'calendar_year', 'unid2', 'X.1')
-alldata3 <- dataSubset[,!colnames(dataSubset) %in% drop]
-allMelt <- melt(alldata3, id=c('site_code', 'project_name', 'community_type', 'experiment_year', 'plot_id', 'data_type', 'site_project', 'label'))
-meanAbundance <- dcast(allMelt, site_code + project_name + community_type + experiment_year + data_type + site_project + label ~ variable, mean)
+
+allMelt <- alldata2%>%
+  select(-unid)%>%
+  gather(species, abundance, sp1:sp99)%>%
+  tbl_df()%>%
+  group_by(experiment_year, site_project_comm, species)%>%
+  summarize(abundance=mean(abundance))
+
+meanAbundance <- dcast(allMelt, experiment_year+site_project_comm ~ species)
 
 ###using codyn package
 # meanAbundanceLong <- melt(meanAbundance, id=c('site_code', 'project_name', 'community_type', 'calendar_year', 'experiment_year', 'data_type', 'site_project', 'label'), variable.name='species', value.name='abundance')
@@ -221,11 +271,7 @@ meanAbundance <- dcast(allMelt, site_code + project_name + community_type + expe
 
 
 #using converge/diverge methods
-#make a label for each unique site, project, community
-meanAbundance$expt=as.factor(paste(meanAbundance$site_code, meanAbundance$project_name, meanAbundance$community_type, sep="::"))
-
 #makes a new dataframe with just the label; here, expt.year includes all site, project, community, exp yr, trt yr designations
-meanAbundance$site_project_comm <- as.factor(with(meanAbundance, paste(site_code, project_name, community_type, sep='_')))
 expt.list=data.frame(expt=levels(droplevels(meanAbundance$site_project_comm))) 
 
 #makes an empty dataframe
@@ -243,15 +289,15 @@ for(i in 1:length(expt.list$expt)) {
   labels=unique(dataset[,'experiment_year'])
   
   #subset only columns with species data in them
-  species=dataset[,c(7, 9:395)]
+  species=dataset[,c(1, 3:393)]
   
   #get list of each experiment year
-  rownames <- meanAbundance[,7]
+  rownames <- meanAbundance[,1]
   
   row.names(species)<-species$experiment_year
   
   #calculate bray-curtis dissimilarity
-  bc=vegdist(species[,2:388], method='bray', diag=F, upper.tri=T)
+  bc=vegdist(species[,2:392], method='bray', diag=F, upper.tri=T)
     
   #dataframe of bray curtis dissimilarities among years in each exp
   bc.d=as.data.frame(as.matrix(bc))
@@ -278,12 +324,12 @@ temporalHetero$year2_num <- as.numeric(as.character(temporalHetero$year2))
 
 temporalHetero$next_year <- temporalHetero$year2_num - temporalHetero$year1_num
 
-temporalHeteroRealYears <- subset(temporalHetero, subset=(next_year==1))
-
+temporalHeteroRealYears <- subset(temporalHetero, subset=(next_year==1))%>%
+  select(expt, temporal_distance, year1_num)
 names(temporalHeteroRealYears)[names(temporalHeteroRealYears)=="expt"] <- "site_project_comm"
-names(temporalHeteroRealYears)[names(temporalHeteroRealYears)=='year1'] <- 'time_step'
-temporalHeteroRealYears$experiment_year <- temporalHeteroRealYears$year1_num
+names(temporalHeteroRealYears)[names(temporalHeteroRealYears)=="year1_num"] <- "experiment_year"
 
+  
 #####################################
 #merge spatial and temporal
 
@@ -314,69 +360,67 @@ spaceTime <- merge(spatialHeteroInfo, temporalHeteroRealYears, by=c('site_projec
 #import experiment info
 
 #getting rid of hay's NA's (adds extra lines in temporal step)
-spaceTimeSubset <- subset(spaceTime, subset=(site_code!='NA'))
+spaceTimeSubset <- na.omit(spaceTime)
 
-expInfo <- read.csv('exptInfo_ecosystem type.csv')
+expInfo <- read.csv('~/Dropbox/CoDyn/R files/11_06_2015_v7/exptInfo_ecosystem type.csv')
 
-spaceTimeInfo <- merge(spaceTimeSubset, expInfo, by=c('site_code'), all=T)
-
-spaceTimeInfo2 <- spaceTimeInfo[complete.cases(spaceTimeInfo$site_project_comm),]
+spaceTimeInfo <- merge(spaceTimeSubset, expInfo, by=c('site_code', "project_name"), all=T)
 
 
 #converge/diverge method
-ggplot(data=spaceTimeInfo2, aes(x=dispersion, y=temporal_distance, colour=system)) +
+ggplot(data=spaceTimeInfo, aes(x=dispersion, y=temporal_distance, colour=system)) +
   geom_point(size=4) +
   geom_smooth(method=lm, se=F) +
   geom_smooth(method=lm, colour='black', size=2, aes(group=1, se=T))
 
-ggplot(data=spaceTimeInfo2, aes(x=dispersion, y=temporal_distance, colour=broad_ecosystem_type)) +
+ggplot(data=spaceTimeInfo, aes(x=dispersion, y=temporal_distance, colour=broad_ecosystem_type)) +
   geom_point(size=4) +
   geom_smooth(method=lm, se=F, size=1) +
   geom_smooth(aes(group=1, se=T), method=lm, colour='black', size=3)
 
-ggplot(data=spaceTimeInfo2, aes(x=dispersion, y=temporal_distance, colour=site_project_comm)) +
+ggplot(data=spaceTimeInfo, aes(x=dispersion, y=temporal_distance, colour=site_project_comm)) +
   geom_point(size=4) +
   geom_smooth(method=lm, se=F) +
   geom_smooth(method=lm, colour='black', size=2, aes(group=1, se=T)) +
   facet_wrap(~broad_ecosystem_type)
 
-ggplot(data=spaceTimeInfo2, aes(x=dispersion, y=temporal_distance, colour=trophic_level..consumer..primary.)) +
+ggplot(data=spaceTimeInfo, aes(x=dispersion, y=temporal_distance, colour=trophic_level)) +
   geom_point(size=4) +
   geom_smooth(method=lm, se=F) +
   geom_smooth(method=lm, colour='black', size=2, aes(group=1, se=T)) +
   facet_wrap(~broad_ecosystem_type)
 
-ggplot(data=spaceTimeInfo2, aes(x=dispersion, y=temporal_distance, colour=succession)) +
+ggplot(data=spaceTimeInfo, aes(x=dispersion, y=temporal_distance, colour=succession)) +
   geom_point(size=4) +
   geom_smooth(method=lm, se=F) +
   geom_smooth(method=lm, colour='black', size=2, aes(group=1, se=T)) +
   facet_wrap(~broad_ecosystem_type)
 
-ggplot(data=spaceTimeInfo2, aes(x=dispersion, y=temporal_distance, colour=system)) +
+ggplot(data=spaceTimeInfo, aes(x=dispersion, y=temporal_distance, colour=system)) +
   geom_point(size=4) +
   geom_smooth(method=lm, se=F) +
   geom_smooth(method=lm, colour='black', size=2, aes(group=1, se=T)) +
   facet_wrap(~succession)
 
-ggplot(data=spaceTimeInfo2, aes(x=dispersion, y=temporal_distance, colour=lifespan..subannual..annual.or.longer.)) +
+ggplot(data=spaceTimeInfo, aes(x=dispersion, y=temporal_distance, colour=lifespan)) +
   geom_point(size=4) +
   geom_smooth(method=lm, se=F) +
   geom_smooth(method=lm, colour='black', size=2, aes(group=1, se=T)) +
   facet_wrap(~broad_ecosystem_type)
 
-ggplot(data=spaceTimeInfo2, aes(x=dispersion, y=temporal_distance, colour=system)) +
+ggplot(data=spaceTimeInfo, aes(x=dispersion, y=temporal_distance, colour=system)) +
   geom_point(size=4) +
   geom_smooth(method=lm, se=F) +
   geom_smooth(method=lm, colour='black', size=2, aes(group=1, se=T)) +
-  facet_wrap(~trophic_level..consumer..primary.)
+  facet_wrap(~trophic_level)
 
-ggplot(data=spaceTimeInfo2, aes(x=dispersion, y=temporal_distance, colour=site_project_comm)) +
+ggplot(data=spaceTimeInfo, aes(x=dispersion, y=temporal_distance, colour=site_project_comm)) +
   geom_point(size=3) +
   geom_smooth(method=lm, se=F) +
   geom_smooth(method=lm, colour='black', size=2, aes(group=1, se=T)) +
   facet_wrap(~site_code)
 
-sev <- subset(spaceTimeInfo2, subset=(site_code=='SEV'))
+sev <- subset(spaceTimeInfo, subset=(site_code=='SEV'))
 ggplot(data=sev, aes(x=dispersion, y=temporal_distance, colour=site_project_comm)) +
   geom_point(size=3) +
   geom_smooth(method=lm, se=F) +
@@ -395,16 +439,20 @@ colnames(meanAbundance)
 
 evenness=data.frame(row.names=1) 
 
-for(i in 1:length(expt.year.list$expt.year)) {
+meanAbundance$site_project_comm_year<-with(meanAbundance, paste(site_project_comm, experiment_year, sep="_"))
+
+expt.list.year=data.frame(expt=unique(meanAbundance$site_project_comm_year)) 
+
+for(i in 1:length(expt.list.year$expt)) {
   
-  dataset=meanAbundance[meanAbundance$label==as.character(expt.year.list$expt.year[i]),]
-  species <- dataset[,9:395]
+  dataset=meanAbundance[meanAbundance$site_project_comm_year==as.character(expt.list.year$expt[i]),]
+  species <- dataset[,3:393]
   H <- as.data.frame(diversity(species))
   S <- as.data.frame(specnumber(species))
   J <- as.data.frame(H/log(S))
   
   #collecting and labeling distances
-  even=data.frame(data.frame(expt.year=expt.year.list$expt.year[i],
+  even=data.frame(data.frame(expt.year=expt.list.year$expt[i],
                              J=J$'diversity(species)',
                              S=S$'specnumber(species)',
                              H=H$'diversity(species)'
@@ -414,12 +462,13 @@ for(i in 1:length(expt.year.list$expt.year)) {
 
 }
 
+spaceTimeInfo$label<-with(spaceTimeInfo, paste(site_code, project_name, community_type, experiment_year, sep="_"))
 names(evenness)[names(evenness)=='expt.year'] <- 'label'
 
-spaceTimeEven <- merge(spaceTimeInfo2, evenness, by='label')
+spaceTimeEven <- merge(spaceTimeInfo, evenness, by='label')
 spaceTimeEven$log_S <- log(spaceTimeEven$S +1)
 
-write.csv(spaceTimeEven, 'spatial_temporal_heterogeneity_diversity.csv')
+write.csv(spaceTimeEven, '~/Dropbox/CoDyn/R files/11_06_2015_v7/spatial_temporal_heterogeneity_diversity.csv')
 
 ggplot(data=spaceTimeEven, aes(x=dispersion, y=temporal_distance, colour=J)) +
   geom_point(size=4) +
