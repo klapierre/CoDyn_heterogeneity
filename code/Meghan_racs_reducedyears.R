@@ -1,4 +1,4 @@
-###Using compiled datasets to assess changes in RACs
+ex###Using compiled datasets to assess changes in RACs
 library(tidyr) #mutate add a column; select choose columns; filter choose rows; group by like aggregate
 library(codyn)
 library(dplyr)
@@ -10,22 +10,22 @@ library(swirl)
 theme_set(theme_bw(20))
 
 #set path
-datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity"
+datpath = "~/Dropbox/CoDyn/R files/11_06_2015_v7"
 
 #read in data
-dat <- read.csv(file.path(datpath, 'relative cover_nceas and converge_10092015.csv'), row.names = 1)%>%
+dat <- read.csv(file.path(datpath, 'relative cover_nceas and converge_11112015.csv'), row.names = 1)%>%
   tbl_df() %>%
   # reduce the species columns to a species and abundance column
-  gather(species, abundance, sp1:sp322) %>% #old col name is 1, and old values become 2
-  #create a unique "sitesubplot" - is this the same as unid?
+  gather(species, abundance, sp1:sp99) %>% #old col name is 1, and old values become 2
+  #create a unique for each plot (combination of year, site, proj, comm, plot_id)
   mutate(sitesubplot=paste(site_code, project_name, plot_id, community_type, sep="_")) %>%
   #remove any non-existent sites (ie, NAs at the end of the excel spreadsheet)
-  filter(!is.na(sitesubplot)) 
+  filter(!is.na(sitesubplot))%>%
+  #Get 1 time step per year for all the aquatic data.
+  mutate(year=trunc(experiment_year))%>%
+  group_by(site_code,project_name,community_type, site_project_comm, sitesubplot, year,plot_id,species)%>%
+  summarize(abundance=max(abundance))
 
-##fix data
-#1 do do not want more than 1 time step per year for all the aquatic data.
-dat$year<-trunc(dat$experiment_year)
-dat2<-aggregate(abundance~site_code+project_name+community_type+year+plot_id+species, max, data=dat)
 #2 need to drop extra LUQ_snails_0 and NTL_ZOO_0
 dat3<-subset(dat2, project_name!="snails"&project_name!="ZOO")
 
@@ -58,7 +58,7 @@ dat_all<-rbind(dat_all1, ntl2)%>%
 
 
 ##make a dat key
-dat.key <- dat_all %>%
+dat.key <- dat %>%
   select(site_code, year, project_name, plot_id, community_type, sitesubplot) %>%
   unique()
 
@@ -177,9 +177,9 @@ ggplot(Div_measures, aes(x=year, y=Have))+
 #METHOD 1.
 dat_all$site_project_comm<-with(dat_all, paste(site_code, project_name, community_type, sep="_"))
 totturn<-as.data.frame(cbind(totalt=as.numeric(), siteprojcom=as.character(), year=as.numeric()))
-mysites<-unique(dat_all$site_project_comm)
+mysites<-unique(dat$site_project_comm)
 for (i in 1:length(mysites)){
-  subber<-dat_all%>%
+  subber<-dat%>%
     filter(site_project_comm==mysites[i])
   subout<-turnover(df=subber, replicate.var = "plot_id")
   names(subout)[1]="totalt"
