@@ -44,8 +44,36 @@ nceas <- read.csv(file.path(datpath, 'NewData_NCEAS_Nov11.csv'))%>%
 names(nceas)[names(nceas)=='plot'] <- 'plot_id'
 nceas$plot_id <- as.character(nceas$plot_id)# for merging
 
+###fixing problems with LUQ snails and #fix luq snails and NTL zoo.
+
+fix<-subset(nceas, project_name!="snails"&project_name!="ZOO")
+
+luq<-subset(nceas, project_name=="snails")
+luq2<-luq%>%
+  filter(experiment_year==1992)%>%
+  tbl_df()%>%
+  select(plot_id)%>%
+  unique()
+luq3<-merge(luq, luq2, by="plot_id")
+#check for only 40 plots/year
+#luq4<-aggregate(abundance~experiment_year+plot_id, length, data=luq3)
+#luq5<-aggregate(plot_id~experiment_year, length, data=luq4)
+#yes, there are now only 40 plots for all years.
+
+# fix NTL Zoo, it is typo in 2013 TR was entered as also Tr.
+ntl<-subset(nceas, project_name=="ZOO")
+ntl$plot_id<-toupper(ntl$plot_id)
+# #check for 7 plots each year
+#ntl3<-aggregate(abundance~experiment_year+plot_id, length, data=ntl)
+#ntl4<-aggregate(plot_id~experiment_year, length, data=ntl3)
+# #yes there are 7 plots each year
+
+#get these back with full dataset
+nceas_all1<-rbind(fix, luq3)
+nceas_all<-rbind(nceas_all1, ntl)
+
 #converge datasets - remove these datasets because they are too short or we are not allowed to use them
-converge <- read.csv(file.path(datpath, "all_relcov2_08062015.csv"))
+converge <- read.csv(file.path(datpath, "corre_relcov.csv"))
 finalYear <- aggregate(converge["treatment_year"], by=converge[c("site_code", "project_name", "community_type")], FUN=max)
 eightYear <- subset(finalYear, subset=(treatment_year>=8))
 drop <- c('treatment_year')
@@ -55,12 +83,17 @@ eightYearControl <- subset(eightYearData, subset=(plot_mani==0))
 eightYearControl$site_project <- paste(eightYearControl$site_code, eightYearControl$project_name, sep='_')
 eightYearControl$site_project_comm <- with(eightYearControl, paste(site_code, project_name, community_type, sep='_'))
 converge2a <- subset(eightYearControl, subset=(site_project_comm!='CDR_e001_D'))
-converge2 <- subset(converge2a, subset=(site_project!='ANG_watering' & site_project!='CAU_RMAPC' & site_project!='dcgs_gap' & site_project!='Finse_WarmNut' & site_project!='ORNL_FACE' & site_project!='ARC_MNT' & site_project!='ARC_MAT2_1996' & site_project!='SGS_ESA' & site_project!='KNZ_BGP' & site_project!='NWT_246Nfert' & site_project!='KNZ_RHPs' & site_project!='CDR_BioCON' & site_project!='KUFS_E6' & site_project!='China_Qiang' & site_project!='ASGA_Exp1' & site_project!='ARC_MAT2' & site_project!='ASGA_clonal' & site_project!='DL_NSFC' & site_project!='CDR_e002'))%>%
-  select(-site_project, -site_project_comm, -X, -unid, -id, -nutrients, -light, -carbon, -water, -other_manipulation, -num_manipulations, -clip,-temp, -precip, -plot_mani, -calendar_year, -treatment_year, -block, -treatment, -plot_id1, -data_type, -species_num, -n, -p, -k, -herb_removal, -burn, -true_num_manipulations, -c, -plant_mani, -true_plot_mani, -lime, -other_nut, -cessation, -dist, -precip_vari, -precip_vari_season, -patchiness, -other_manipulations, -l, -fungicide, -soil_carbon, -grazed, -soil_depth, -precip_season)%>%
-  gather(species, abundance, sp1:sp232)
+converge2b <- subset(converge2a, subset=(site_project!='ANG_watering' & site_project!='CAU_RMAPC' & site_project!='dcgs_gap' & site_project!='Finse_WarmNut' & site_project!='ORNL_FACE' & site_project!='ARC_MNT' & site_project!='ARC_MAT2_1996' & site_project!='SGS_ESA' & site_project!='KNZ_BGP' & site_project!='NWT_246Nfert' & site_project!='KNZ_RHPs' & site_project!='CDR_BioCON' & site_project!='KUFS_E6' & site_project!='IMGERS_Yu' & site_project!='ASGA_Exp1' & site_project!='ARC_MAT2' & site_project!='ASGA_clonal' & site_project!='DL_NSFC'))
+converge2b$drop<-ifelse(converge2b$site_project=="CDR_e002"&converge2b$treatment_year>10, 1, 0)
+converge2c<-subset(converge2b, drop!=1)
+names(converge2c)[names(converge2c)=='calendar_year'] <- 'experiment_year'
+names(converge2c)[names(converge2c)=='relcov'] <- 'abundance'
+converge2<-converge2c%>%
+  select(experiment_year, plot_id, site_code, project_name, community_type, species, abundance)
+
 
 #merge nceas data and converge data
-alldata <- rbind(nceas, converge2)%>%
+alldata <- rbind(nceas_all, converge2)%>%
   mutate(site_project=paste(site_code, project_name, sep='_'))%>%
   mutate(site_project_comm =paste(site_code, project_name, community_type, sep='_'))%>%
   mutate(unid=paste(plot_id, community_type, project_name, site_code, experiment_year, sep="_"))
@@ -72,6 +105,7 @@ alldata[is.na(alldata)] <- 0
 information<-alldata%>%
   select(experiment_year, plot_id, site_code, project_name, community_type, site_project, site_project_comm, unid)%>%
   unique()
+
 #get species list
 species<-alldata%>%
   select(unid, species, abundance)
@@ -82,7 +116,7 @@ sumcover<-alldata%>%
   select(unid, species, abundance)%>%
   tbl_df()%>%
   group_by(unid)%>%
-  summarize(totcov=sum(abundance))
+  summarise(totcov = sum(abundance))
 
 #merge species data and sum of cover by plot
 relcov<-merge(sumcover, species, by="unid") # ! SLOW ! 
@@ -99,47 +133,14 @@ relcov_a<-subset(relcov, subset=(totcov!=0))%>%
 #   select(unid, species, relcov)
 #relcov_all<-rbind(relcov_a, relcov_b)
 
-###fixing problems with LUQ snails and #fix luq snails and NTL zoo.
-fix<-merge(relcov_a, information, by="unid")
-fix2<-subset(fix, project_name!="snails"&project_name!="ZOO")
-
-luq<-subset(fix, project_name=="snails")
-luq2<-luq%>%
-  filter(experiment_year==1992)%>%
-  tbl_df()%>%
-  select(plot_id)%>%
-  unique()
-luq3<-merge(luq, luq2, by="plot_id")
-#check for only 40 plots/year
-# luq4<-aggregate(relcov~experiment_year+plot_id, length, data=luq3)
-# luq5<-aggregate(plot_id~experiment_year, length, data=luq4)
-#yes, there are now only 40 plots for all years.
-
-# fix NTL Zoo, it is typo in 2013 TR was entered as also Tr.
-ntl<-subset(fix, project_name=="ZOO")
-ntl$plot_id<-toupper(ntl$plot_id)
-ntl2<-aggregate(relcov~unid+site_code+project_name+community_type+experiment_year+plot_id+site_project+site_project_comm+species, max, data=ntl)
-# #check for 7 plots each year
-#  ntl3<-aggregate(relcov~experiment_year+plot_id, length, data=ntl2)
-#  ntl4<-aggregate(plot_id~experiment_year, length, data=ntl3)
-# #yes there are 7 plots each year
-
-#get these back with full dataset
-dat_all1<-rbind(fix2, luq3)
-dat_all<-rbind(dat_all1, ntl2)%>%
-  select(unid, relcov, species)
-#where are the duplicate plots GROUCH!
-# test<-aggregate(relcov~unid+variable, length, data=dat_all)
-# tests<-subset(test, relcov>1)
-
 #re-transpose to get species as columns
-relcov3<-dcast(dat_all, unid ~ species, value.var="relcov")
+relcov3<-dcast(relcov_a, unid ~ species, value.var="relcov")
 relcov3[is.na(relcov3)]<-0
 
 #merge the species data back together with the informational data
 relcov4<-merge(information, relcov3, by="unid")
 
-write.csv(relcov4, '~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_11112015.csv', row.names=F)
+write.csv(relcov4, '~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_12012015.csv', row.names=F)
 
 
 ###################################
@@ -151,7 +152,7 @@ write.csv(relcov4, '~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas a
 ###################################
 
 
-alldata3 <- read.csv('~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_11112015.csv')
+alldata3 <- read.csv('~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_12012015.csv')
 
 #make year as factor
 expt.list=data.frame(expt=levels(droplevels(alldata3$site_project_comm)))
