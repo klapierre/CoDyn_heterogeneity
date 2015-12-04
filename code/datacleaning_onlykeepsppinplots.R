@@ -124,7 +124,12 @@ dat.test2 <- dat5 %>%
 #remove sitesubplots with species that never vary (important for VR)
 dat6 <- merge (dat5, dat.test2) %>%
   filter(problem==0) %>%
-  select(-problem)
+  select(-problem, -var0)
+
+#has two extra columns (timelength = number of replicate time intervals and totrich = total richness across time series)
+# dat7 <- dat6 %>%
+#   spread(species, abundance, fill=0) %>%
+#   select(-totrich)
 
 ###RUN CODYN METRICS
 # turn.dat<-turnover(dat5, time.var="experiment_year", replicate.var="sitesubplot")
