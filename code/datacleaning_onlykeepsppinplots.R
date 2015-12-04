@@ -8,13 +8,13 @@ datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" # this lik
 
 #read in the data
 
-rawdat <- read.csv(file.path(datpath, 'relative cover_nceas and converge_10092015.csv'), row.names = 1) 
+rawdat <- read.csv(file.path(datpath, 'relative cover_nceas and converge_12012015.csv'), row.names = 1) 
 
-prevdat <-rawdat %>%
-  tbl_df() %>%
-  gather(species, abundance, sp1:sp322) %>%
-  mutate(sitesubplot=paste(site_code, project_name, plot_id, community_type, sep="_")) %>%
-    filter(!is.na(sitesubplot)) 
+# prevdat <-rawdat %>%
+#   tbl_df() %>%
+#   gather(species, abundance, sp1:sp392) %>%
+#   mutate(sitesubplot=paste(site_code, project_name, plot_id, community_type, sep="_")) %>%
+#     filter(!is.na(sitesubplot)) 
 
 
 dat <-rawdat %>%
@@ -22,7 +22,7 @@ dat <-rawdat %>%
     tbl_df() %>%
   
   # reduce the species columns to a species and abundance column
-  gather(species, abundance, sp1:sp322) %>%
+  gather(species, abundance, sp1:sp392) %>%
   
   #remove any zeros
   filter(abundance>0) %>%
@@ -59,7 +59,9 @@ ID <- unique(names(out))
 out <- mapply(function(x, y) "[<-"(x, "sitesubplot", value = y) ,
               out, ID, SIMPLIFY = FALSE)
 dat3 <- do.call("rbind", out) %>%
-  tbl_df()
+  tbl_df() %>%
+  filter(!is.na(species), !is.na(abundance), !is.na(sitesubplot), !is.na(experiment_year))
+
 
 #Check that there are no sitesubplots that had absolutely nothing ever
 dat3 %>%
@@ -87,18 +89,43 @@ dat.test<-dat3 %>%
   group_by(sitesubplot) %>%
   summarize(timelength=sum(count))
 
-
-#create dat2, which only has sitesubplots with 2 yrs or more
+#create dat4, which only has sitesubplots with 2 yrs or more
+#and which 
 dat4<-merge(dat3, dat.test) %>%
   filter(timelength>1) %>%
   tbl_df()
 
-##Prevdat2 should have only species within a sitesubplot that existed at one point in time
-##And only includes sitesubplots for which data were collected for at least two years
-prevdat2 <-merge(prevdat, dat.test) %>%
-  filter(timelength>1) %>%
+#identify sitesubplots that only ever have one species
+dat.test1<-dat4%>%
+  select(sitesubplot, species) %>%
+  unique() %>%
+  group_by(sitesubplot) %>%
+  mutate(totrich=n())
+
+#remove sitesubplots that only ever have one species, creating dat6
+dat5<-merge(dat4, dat.test1) %>%
+  filter(totrich>1) %>%
+  mutate(species=as.character(species))%>%
   tbl_df()
 
+#identify sitesubplots in which all of the species never vary
+dat.test2 <- dat5 %>%
+  group_by(sitesubplot, species) %>%
+  summarize(sppvar=var(abundance)) %>%
+  tbl_df() %>%
+  mutate(var0=ifelse(sppvar==0, 1, 0)) %>%
+  group_by(sitesubplot) %>%
+  summarize(var0=sum(var0), totcount=n()) %>%
+  mutate(problem=ifelse(var0==totcount, 1, 0))
+
+#remove sitesubplots with species that never vary (important for VR)
+dat6 <- merge (dat5, dat.test2) %>%
+  filter(problem==0) %>%
+  select(-problem)
 
 ###RUN CODYN METRICS
-turn.dat<-turnover(prevdat2, time.var="experiment_year", replicate.var="sitesubplot", metric="total")
+turn.dat<-turnover(dat5, time.var="experiment_year", replicate.var="sitesubplot")
+synch.dat<-synchrony(dat5, time.var="experiment_year", replicate.var="sitesubplot")
+synch.dat2<-synchrony(dat5, time.var="experiment_year", replicate.var="sitesubplot", metric="Gross")
+vr.dat <- variance_ratio(dat6, time.var="experiment_year", species.var="species", abundance.var="abundance", replicate.var="sitesubplot", bootnumber=1, average.replicates=F)
+
