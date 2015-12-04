@@ -4,11 +4,14 @@ library(codyn)
 library(ggplot2)
 
 
-datpath = "~/Dropbox/CoDyn/R files/10_08_2015_v6/CoDyn_heterogeneity" # this likely will be different for different folks
+datpath = "~/Dropbox/CoDyn/R files/11_06_2015_v7/CoDyn_heterogeneity" # this likely will be different for different folks
 
 #read in the data
 
-rawdat <- read.csv(file.path(datpath, 'relative cover_nceas and converge_12012015.csv'), row.names = 1) 
+#for some reason datpath is no longer working for me (LH)
+#bring it latest here:
+#rawdat <- read.csv(file.path(datpath, "relative cover_nceas and converge_12012015.csv"), row.names = 1) 
+rawdat <- read.csv( "relative cover_nceas and converge_12012015.csv", row.names = 1) 
 
 # prevdat <-rawdat %>%
 #   tbl_df() %>%
