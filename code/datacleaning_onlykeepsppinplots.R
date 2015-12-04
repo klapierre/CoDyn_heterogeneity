@@ -127,8 +127,8 @@ dat6 <- merge (dat5, dat.test2) %>%
   select(-problem)
 
 ###RUN CODYN METRICS
-turn.dat<-turnover(dat5, time.var="experiment_year", replicate.var="sitesubplot")
-synch.dat<-synchrony(dat5, time.var="experiment_year", replicate.var="sitesubplot")
-synch.dat2<-synchrony(dat5, time.var="experiment_year", replicate.var="sitesubplot", metric="Gross")
-vr.dat <- variance_ratio(dat6, time.var="experiment_year", species.var="species", abundance.var="abundance", replicate.var="sitesubplot", bootnumber=1, average.replicates=F)
+# turn.dat<-turnover(dat5, time.var="experiment_year", replicate.var="sitesubplot")
+# synch.dat<-synchrony(dat5, time.var="experiment_year", replicate.var="sitesubplot")
+# synch.dat2<-synchrony(dat5, time.var="experiment_year", replicate.var="sitesubplot", metric="Gross")
+# vr.dat <- variance_ratio(dat6, time.var="experiment_year", species.var="species", abundance.var="abundance", replicate.var="sitesubplot", bootnumber=1, average.replicates=F)
 
