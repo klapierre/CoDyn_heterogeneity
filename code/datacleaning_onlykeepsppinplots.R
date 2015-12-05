@@ -4,13 +4,13 @@ library(codyn)
 library(ggplot2)
 
 
-datpath = "~/Dropbox/CoDyn/R files/11_06_2015_v7/CoDyn_heterogeneity" # this likely will be different for different folks
+datpath = "~/Dropbox/CoDyn/R files/11_06_2015_v7/" # this likely will be different for different folks
 
 #read in the data
 
 #for some reason datpath is no longer working for me (LH)
 #bring it latest here:
-#rawdat <- read.csv(file.path(datpath, "relative cover_nceas and converge_12012015.csv"), row.names = 1) 
+rawdat <- read.csv(file.path(datpath, "relative cover_nceas and converge_12012015.csv"), row.names = 1) 
 rawdat <- read.csv( "relative cover_nceas and converge_12012015.csv", row.names = 1) 
 
 # prevdat <-rawdat %>%
@@ -25,7 +25,7 @@ dat <-rawdat %>%
     tbl_df() %>%
   
   # reduce the species columns to a species and abundance column
-  gather(species, abundance, sp1:sp392) %>%
+  gather(species, abundance, sp1:sp99) %>%
   
   #remove any zeros
   filter(abundance>0) %>%
@@ -75,7 +75,7 @@ dat3 %>%
 
 #make a key of sitesubplots by site_code and project_name
 dat.key01 <-dat %>%
-  select(site_code, project_name, sitesubplot) %>%
+  select(site_code, project_name, sitesubplot, community_type, site_project_comm) %>%
   unique()
 
 #import experimental data
@@ -127,9 +127,13 @@ dat6 <- merge (dat5, dat.test2) %>%
   select(-problem, -var0)
 
 #has two extra columns (timelength = number of replicate time intervals and totrich = total richness across time series)
-# dat7 <- dat6 %>%
-#   spread(species, abundance, fill=0) %>%
-#   select(-totrich)
+dat7 <- dat6 %>%
+ spread(species, abundance, fill=0) %>%
+ select(-totrich, -timelength, -totcount)
+
+dat8<-merge(dat7, dat.key01, by="sitesubplot")
+
+write.csv(dat8, "~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_12012015_cleaned.csv")
 
 ###RUN CODYN METRICS
 # turn.dat<-turnover(dat5, time.var="experiment_year", replicate.var="sitesubplot")
