@@ -143,6 +143,8 @@ relcov4<-merge(information, relcov3, by="unid")
 write.csv(relcov4, '~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_12012015.csv', row.names=F)
 
 
+#then run data thorugh datacleaning step.
+
 ###################################
 ##################################
 ######
@@ -152,7 +154,7 @@ write.csv(relcov4, '~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas a
 ###################################
 
 
-alldata3 <- read.csv('~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_12012015.csv')
+alldata3 <- read.csv('~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_12012015_cleaned.csv')
 
 #make year as factor
 expt.list=data.frame(expt=levels(droplevels(alldata3$site_project_comm)))
@@ -211,7 +213,7 @@ for(i in 1:length(expt.year.list$expt.year)) {
   dataset=alldata2[alldata2$label==as.character(expt.year.list$expt.year[i]),]
   
   #subset only columns with species data in them
-  species=dataset[,9:399]
+  species=dataset[,4:394]
   
   #calculate bray-curtis dissimilarity
   bc=vegdist(species, method='bray',diag=F, upper=TRUE)
@@ -253,7 +255,6 @@ spatialHeteroInfo<- ddply(spatialHetero, c('expt.year'), summarise,
 #melt and reshape data to get means of all species
 
 allMelt <- alldata2%>%
-  select(-unid)%>%
   gather(species, abundance, sp1:sp99)%>%
   tbl_df()%>%
   group_by(experiment_year, site_project_comm, species)%>%
