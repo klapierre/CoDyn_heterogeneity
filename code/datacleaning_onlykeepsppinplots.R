@@ -75,7 +75,7 @@ dat3 %>%
 
 #make a key of sitesubplots by site_code and project_name
 dat.key01 <-dat %>%
-  select(site_code, project_name, sitesubplot, community_type, site_project_comm) %>%
+  select(site_code, project_name, sitesubplot, community_type, site_project_comm, plot_id) %>%
   unique()
 
 #import experimental data
