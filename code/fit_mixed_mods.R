@@ -13,10 +13,22 @@ dat <- read.csv(file.path(datpath, 'spatial_temporal_heterogeneity_diversity.csv
 
 dat <- dat[!is.na(dat$temporal_distance),] # 40 rows of NA
 
+# Goals:
+
+# 1. Temporal distance by dispersion. Temporal distance = bray-curtis across years within an experiment. Dispersion: bray-curtis across spatial replicates within an experiment. Take into account evenness J and other covariates
+# - by biome (aquatic/terrestrial)
+# - by ecosystem type (herbaceous/woody/lake/river)
+
+# Questions: 1. Spatial vs temporal variability as predictor or response?
+#            2. Include other metrics from codyn package? variance_ratio, synchrony...
+
+
 # Lmer models with hierarchical structure for the random effects
+
 m1 <- lmer(temporal_distance ~ dispersion + J + 
            (1 | site_code / project_name.x / community_type),
            data = dat)
+
 summary(m1)
 ranef(m1) # Estimates for the random effects 
 fixef(m1) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
@@ -67,9 +79,11 @@ fixef(m3) # Estimate (slopes) for the fixed effects of dispersion and evenness J
 
 pdf("Random Effects plots m3.pdf", width = 10, height = 10)
 sjp.lmer(m3)
-dev.off(); system("open 'Random Effects plots m3.pdf' -a /Applications/Preview.app")
+sjp.lmer(m3, type = "fe") # fixed effects
+dev.off(); system("open 'Random and Fixed Effects plots m3.pdf' -a /Applications/Preview.app")
 
 # Random slopes as per Eric's models below
+
 
 
 m22 <- lmer(temporal_distance ~ dispersion + J + 
@@ -82,12 +96,38 @@ m22 <- lmer(temporal_distance ~ dispersion + J +
            data = dat)
 summary(m22)
 ranef(m22) # Estimates for the random effects 
-fixef(m2) # Estimate (slopes) for
+fixef(m22) # Estimate (slopes) for
 
 
-# TODO bubbleplots for Scott. Size of bubbles by 
+
+# TODO bubbleplots for Scott. Size of bubbles by ... 
+#   number of plots - X..plots
+#   plot size       - plot_size..m
+#   total area      - spatial_extent..m2.
+#   total time span - dataset_length
+dat.agg <- aggregate(dat[c("temporal_distance","dispersion","spatial_extent..m2.","dataset_length")], 
+                     dat[c("site_code","project_name.x")],
+                     mean, na.rm=T)
+
+colz = as.numeric(dat.agg$site_code)
+ccolz = rainbow(n = length(unique(colz)), v = 0.5, alpha = 0.7)[colz]
 
 
+plot(temporal_distance ~ dispersion, data = dat,
+     pch = 16, col = alpha("black", alpha = 0.01)) 
+
+abline(a=fixef(m22)[1], b = fixef(m22)[2])
+
+with(dat.agg,
+points(dispersion, temporal_distance,
+        pch = 16, 
+        col = ccolz,
+        cex = log(spatial_extent..m2.)/5))
+
+
+#levels(cut(log(dat.agg$spatial_extent..m2.)/5, 5))
+
+#legend(cex = levels(cut(log(dat.agg$spatial_extent..m2.)/5, 5))
 
 ########## Eric code below
 
