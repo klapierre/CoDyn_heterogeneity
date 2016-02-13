@@ -25,7 +25,7 @@ dat <-rawdat %>%
     tbl_df() %>%
   
   # reduce the species columns to a species and abundance column
-  gather(species, abundance, sp1:sp99) %>%
+  gather(species, abundance, sp1:sp182) %>%
   
   #remove any zeros
   filter(abundance>0) %>%
@@ -125,6 +125,10 @@ dat.test2 <- dat5 %>%
 dat6 <- merge (dat5, dat.test2) %>%
   filter(problem==0) %>%
   select(-problem, -var0)
+
+dat6v2 <-merge(dat.key01, dat6, by="sitesubplot")
+write.csv(dat6v2, "~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_12012015_cleaned_longform.csv")
+
 
 #has two extra columns (timelength = number of replicate time intervals and totrich = total richness across time series)
 dat7 <- dat6 %>%
