@@ -2,7 +2,16 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(vegan)
+library(grid)
 
+## SET GGPLOT THEME ##
+theme_set(theme_bw())
+theme_update(axis.title.x=element_text(size=20, vjust=-0.35), axis.text.x=element_text(size=8),
+             axis.title.y=element_text(size=20, angle=90, vjust=0.5), axis.text.y=element_text(size=8),
+             plot.title = element_text(size=24, vjust=2),
+             axis.ticks.length=unit(-0.25, "cm"), axis.ticks.margin=unit(0.5, "cm"),
+             panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+             strip.text.x = element_text(size = 16))
 
 #### DATA CLEANING ###
 ## Read in Meghan's wide data
@@ -95,7 +104,6 @@ rm(rate_interval_out_BC0, rate_interval_out_BC1)
 dat$siteyr <- paste(dat$site_project_comm, dat$experiment_year, sep="_")
 mysites <- unique(dat$siteyr) 
 
-subber <- subset(dat, siteyr == mysites[i])
 
 ## Function to transpose data
 transpose_community_spatial <- function(df, replicate.var, species.var, abundance.var) {
@@ -124,14 +132,47 @@ dat2 <- dat %>%
   mutate(species=as.character(species)) %>%
   select(siteyr, sitesubplot, species, abundance)
 
-X <- split(dat2, dat$siteyr)
-myout<-do.call("rbind", lapply(X, FUN=spaceBC2))
+X <- split(dat2, dat2$siteyr)
+myout<-do.call("rbind", lapply(X, FUN=spaceBC))
 
 spatial_dispersion <- as.data.frame(cbind(siteyr=row.names(myout), dispersion=myout[,1])) %>%
   tbl_df() %>%
-  mutate(dispersion=as.numeric(as.character(dispersion)))
+  mutate(dispersion=as.numeric(as.character(dispersion))) %>%
+  arrange(siteyr)
   
 # Create a siteyr column to merge
 rate_interval_out_BC$siteyr <- paste(rate_interval_out_BC$site_project_comm, rate_interval_out_BC$experiment_year, sep="_")
+rate_interval_out_BC_small <- rate_interval_out_BC %>%
+  select(siteyr, site_code, site_project_comm, lifespan, trophic_level, ANPP, interval, sitesubplot, distance) %>%
+  arrange(siteyr, sitesubplot, interval)
 
-#ratetog <- merge(spatial_dispersion, rate_interval_out, by="siteyr", all.y=T)
+ratetog <- merge(spatial_dispersion, rate_interval_out_BC_small, by="siteyr", all.y=T) %>%
+  tbl_df()
+ratetog$lifespan <- factor(ratetog$lifespan, levels = c("subannual", "annual", "longer"))
+
+# Holy cow there are some long intervals; capping it at 10 or 20
+max(ratetog$interval)
+
+pdf("SpatialTemporal_byInterval.pdf")
+ ggplot(subset(ratetog, interval<20), aes(x=dispersion, y=distance, group=interval)) + 
+  # geom_point(aes(group=site_project_comm, color=interval)) +
+  # geom_point(aes(color=interval)) +
+  geom_smooth(aes(color=interval), method="lm") + facet_wrap(~lifespan) + 
+   labs(x="Spatial dispersion", y="Temporal distance", color="Interval")
+
+# 
+#  ggplot(subset(ratetog, interval<10), aes(x=dispersion, y=distance, group=site_project_comm)) + 
+#    geom_smooth(aes(color=interval), method="lm", se=F) + facet_grid(interval~lifespan)+ 
+#    labs(x="Spatial dispersion", y="Temporal distance", color="Interval")
+#  
+ 
+ 
+ ggplot(subset(ratetog, interval<10), aes(x=dispersion, y=distance)) + 
+   geom_point(aes(group=site_project_comm, color=site_code), pch=1) +
+   # geom_point(aes(color=interval)) +
+   geom_smooth(method="lm", se=F, size=2, color="black") + facet_grid(interval~lifespan) + 
+   labs(x="Spatial dispersion", y="Temporal distance", color="Site")
+ 
+ 
+ dev.off()
+ 

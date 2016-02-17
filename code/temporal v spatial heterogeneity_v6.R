@@ -215,6 +215,8 @@ for(i in 1:length(expt.year.list$expt.year)) {
   #subset only columns with species data in them
   species=dataset[,4:394]
   
+  # species <- species[,colSums(species) > 0]
+  
   #calculate bray-curtis dissimilarity
   bc=vegdist(species, method='bray',diag=F, upper=TRUE)
   
