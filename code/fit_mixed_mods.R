@@ -12,13 +12,35 @@ library(xtable) # for making LaTeX formatted tables
 
 datpath = file.path("~/Dropbox/CoDyn/R files", sort(dir("~/Dropbox/CoDyn/R files/"), T)[1]) # or we can do URL method per Matt
 
-
 figpath = "~/Documents/git/CoDyn_heterogeneity/writing/images"
 
 # -- read in data
 dat <- read.csv(file.path(datpath, 'spatial_temporal_heterogeneity_diversity.csv'), row.names = 1)
 
-dat <- dat[!is.na(dat$temporal_distance),] # 40 rows of NA
+pdat <- read.csv(file.path(datpath, "PresentAbsent_spatial_temporal_heterogeneity_diversity.csv"))
+
+
+# Adding in plot-level evenness and richness, need to recalculate timesteps  (not all of them actually are years). Code from v6 script
+plotlev <- read.csv(file.path(datpath, "RichEvenness_PlotLevel.csv"))
+
+newYear <- data.frame(row.names=1)
+
+for(i in unique(plotlev$site_project_comm)) { 
+  
+  xx = plotlev[plotlev$site_project_comm == i,]
+  xx$experiment_year1 <- as.numeric(as.factor(xx$experiment_year))
+  newYear=rbind(newYear, xx)
+  
+}
+
+plotlev <- newYear
+
+names(plotlev)[which(names(plotlev) == "J")] = "plotJ"
+
+plotlev$uniqueID = paste(plotlev$site_project_comm, plotlev$experiment_year1)
+dat$uniqueID =  paste(dat$site_project_comm, dat$experiment_year)
+
+d2 <- merge(dat, plotlev[c("uniqueID","rich","shannon","plotJ")], by = "uniqueID", all.x = T, all.y = F)
 
 # Goals:
 
@@ -75,16 +97,16 @@ dev.off();system(paste("open", file.path(figpath, "designmodel.pdf"), "-a /Appli
 
 
 # now again, but with organsim and system features as predictors
-m2 <- lmer(temporal_distance ~ dispersion + #J +  #dispersion:J + 
+m2 <- lmer(temporal_distance ~ dispersion + J +  
              taxa  +
              lifespan + 
              S +
-              ANPP + 
-              succession +
-              trophic_level +
-              system +
-              #system:dispersion +
-              (dispersion | site_code / project_name / community_type),
+             ANPP + 
+             succession +
+             trophic_level +
+             system +
+             #system:dispersion +
+             (dispersion | site_code / project_name / community_type),
             data = dat)
 summary(m2)
 ranef(m2) # Estimates for the random effects 
@@ -101,6 +123,67 @@ dev.off();system(paste("open", file.path(figpath, "systemmodel.pdf"), "-a /Appli
 
 # Fixed effects table
 xtable(summary(m2)$coefficients)
+
+##### interaction of evenness and spatial heterogeneity (dispersion)
+m2 <- lmer(temporal_distance ~ dispersion * J + 
+             dispersion * plotJ + 
+             (dispersion | site_code / project_name / community_type),
+           data = d2)
+sjp.lmer(m2, type = 'fe.std')
+
+############ For interaction of lifespan and interval
+
+m4 <- lmer(
+  temporal_distance ~ dispersion + 
+        ( dispersion | lifespan ),
+  data = dat)
+
+
+
+###### Now running with the presence-absence
+
+m5 <- lmer(jac_tempdist ~ jac_disp +
+             S + 
+             J + 
+             (jac_disp | site_code / project_name / community_type),
+           data = pdat)
+
+summary(m5)
+ranef(m5) # Estimates for the random effects 
+fixef(m5) # Estimate (slopes) 
+
+
+sjp.lmer(m5, type = 'fe.std', 
+         axisTitle.x = "Predictors of temporal heterogeneity",
+         axisTitle.y = "Effect size",
+         fade.ns = F)
+
+
+######### Plot-level richness and evenness
+
+m6 <- lmer(temporal_distance ~ dispersion +
+             rich + 
+             plotJ + 
+             (dispersion | site_code / project_name / community_type),
+           data = d2)
+
+summary(m6)
+ranef(m6) # Estimates for the random effects 
+fixef(m6) # Estimate (slopes) 
+
+sjp.lmer(m6, type = 'fe.std', 
+         axisTitle.x = "Predictors of temporal heterogeneity",
+         axisTitle.y = "Effect size",
+         fade.ns = F)
+
+
+
+ggplot(d2, aes(x = dispersion, y = plotJ)) + 
+  xlab("Spatial Heterogeneity") + ylab("Plot-levelEvenness") +
+  #geom_point(aes(color = taxa), alpha = 0.7, size = 0.8) + 
+  #scale_color_hue(l=40) +
+  theme_bw()
+
 
 
 # For just longer-lifespan organisms, is there still going to be a relationship?
@@ -158,6 +241,9 @@ ggplot(dat, aes(x = dispersion, y = temporal_distance, group = system)) +
   theme_bw()
 
 dev.off();system(paste("open", file.path(figpath, "aqterr.pdf"), "-a /Applications/Preview.app"))
+
+
+
 
 
 # TODO bubbleplots for Scott. Size of bubbles by ... 
