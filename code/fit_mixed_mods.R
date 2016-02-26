@@ -5,8 +5,15 @@
 library(nlme)
 library(lme4) # for lmer
 library(sjPlot) # for plotting random effects of mixed effects models. install.packages('sjPlot',dep=T)
+library(ggplot2)
+library(xtable) # for making LaTeX formatted tables
 
-datpath = "~/Dropbox/CoDyn/R files/11_06_2015_v7/" # or we can do URL method per Matt
+# Find latest
+
+datpath = file.path("~/Dropbox/CoDyn/R files", sort(dir("~/Dropbox/CoDyn/R files/"), T)[1]) # or we can do URL method per Matt
+
+
+figpath = "~/Documents/git/CoDyn_heterogeneity/writing/images"
 
 # -- read in data
 dat <- read.csv(file.path(datpath, 'spatial_temporal_heterogeneity_diversity.csv'), row.names = 1)
@@ -27,78 +34,22 @@ dat <- dat[!is.na(dat$temporal_distance),] # 40 rows of NA
 
 # Lmer models with hierarchical structure for the random effects
 
-
-# Variables to include
-
-#   
-
-m1 <- lmer(temporal_distance ~ dispersion + J + 
-             + dispersion:J +
-           (dispersion | site_code / project_name / community_type),
-           data = dat)
-
-summary(m1)
-ranef(m1) # Estimates for the random effects 
-fixef(m1) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
-sjp.lmer(m1, type = "fe")
+# Simple model, not using
+# 
+# m1 <- lmer(temporal_distance ~ dispersion + J + 
+#              + dispersion:J +
+#            (dispersion | site_code / project_name / community_type),
+#            data = dat)
+# 
+# summary(m1)
+# ranef(m1) # Estimates for the random effects 
+# fixef(m1) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
+# sjp.lmer(m1, type = "fe")
 
 
-# Plotting the random effects. Since this model is intercept only, we can interpret these easily as the differences betwen community types or project names or sites in mean temporal distance.
-pdf("Random Effects plots m1.pdf", width = 10, height = 10)
-sjp.lmer(m1)
-dev.off(); system("open 'Random Effects plots m1.pdf' -a /Applications/Preview.app")
+# Random slopes for spatial heterogeneity, first by study design variables
 
-## Now adding in a million covariates
-m2 <- lmer(temporal_distance ~ dispersion + J + 
-             plot_size + 
-            
-             spatial_extent +
-             dataset_length + 
-             time_step +
-             (1 | site_code / project_name / community_type),
-           data = dat)
-summary(m2)
-ranef(m2) # Estimates for the random effects 
-fixef(m2) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
-
-pdf("Random Effects plots m2.pdf", width = 10, height = 10)
-sjp.lmer(m2)
-dev.off(); system("open 'Random Effects plots m2.pdf' -a /Applications/Preview.app")
-
-m3 <- lmer(temporal_distance ~ dispersion + 
-             J + 
-             plot_size + 
-             num_plots + 
-             spatial_extent +
-             dataset_length + 
-             time_step +
-             temp_C + 
-             MAP_mm +
-             S + 
-             lifespan + 
-             succession + 
-             trophic_level + 
-            # system + 
-             broad_ecosystem_type + 
-            # ANPP..g.m2. +
-             (1 | site_code / project_name / community_type),
-           data = dat)
-summary(m3)
-ranef(m3) # Estimates for the random effects 
-fixef(m3) # Estimate (slopes) for the fixed effects of dispersion and evenness J. Both are positive
-
-pdf("Random Effects plots m3.pdf", width = 10, height = 10)
-sjp.lmer(m3)
-sjp.lmer(m3, type = "fe") # fixed effects
-dev.off(); system("open 'Random and Fixed Effects plots m3.pdf' -a /Applications/Preview.app")
-
-# Random slopes as per Eric's models below
-
-
-
-m22 <- lmer(temporal_distance ~ dispersion + #J + 
-              S +
-              ANPP + 
+m1 <- lmer(temporal_distance ~ dispersion +
              plot_size + 
              num_plots + 
              spatial_extent +
@@ -106,68 +57,65 @@ m22 <- lmer(temporal_distance ~ dispersion + #J +
              time_step + 
              (dispersion | site_code / project_name / community_type),
            data = dat)
-summary(m22)
-ranef(m22) # Estimates for the random effects 
-fixef(m22) # Estimate (slopes) for
-sjp.lmer(m22, type = "fe")
+summary(m1)
+ranef(m1) # Estimates for the random effects 
+fixef(m1) # Estimate (slopes) 
+
+
+# Fixed effects table
+xtable(summary(m1)$coefficients)
+
+pdf(file.path(figpath, "designmodel.pdf"), width = 5, height = 5)
+sjp.lmer(m1, type = 'fe.std', 
+         axisTitle.x = "Predictors of temporal heterogeneity",
+         axisTitle.y = "Effect size",
+         fade.ns = F)
+dev.off();system(paste("open", file.path(figpath, "designmodel.pdf"), "-a /Applications/Preview.app"))
 
 
 
-
-m23 <- lmer(temporal_distance ~ dispersion + #J +  #dispersion:J + 
-            #  broad_ecosystem_type * taxa  +
+# now again, but with organsim and system features as predictors
+m2 <- lmer(temporal_distance ~ dispersion + #J +  #dispersion:J + 
+             taxa  +
+             lifespan + 
+             S +
+              ANPP + 
               succession +
               trophic_level +
               system +
               #system:dispersion +
               (dispersion | site_code / project_name / community_type),
             data = dat)
-summary(m23)
-ranef(m23) # Estimates for the random effects 
-fixef(m23) # Estimate (slopes) 
-sjp.lmer(m23, type = "fe")
+summary(m2)
+ranef(m2) # Estimates for the random effects 
+fixef(m2) # Estimate (slopes) 
 
 
-##### Organism-level predictors
+pdf(file.path(figpath, "systemmodel.pdf"), width = 5, height = 5)
+sjp.lmer(m2, type = 'fe.std', 
+         axisTitle.x = "Predictors of temporal heterogeneity",
+         axisTitle.y = "Effect size",
+         fade.ns = F)
+dev.off();system(paste("open", file.path(figpath, "systemmodel.pdf"), "-a /Applications/Preview.app"))
 
 
-m24 <- lmer(temporal_distance ~  dispersion + 
-              taxa  +
-              lifespan +
-              #trophic_level +
-              #system +
-              #system:dispersion +
-              (dispersion | site_code / project_name / community_type),
-            data = dat)
-summary(m24)
-ranef(m23) # Estimates for the random effects 
-fixef(m23) # Estimate (slopes) 
-sjp.lmer(m24, type = "fe")
+# Fixed effects table
+xtable(summary(m2)$coefficients)
 
 
 # For just longer-lifespan organisms, is there still going to be a relationship?
-m25 <- lmer(temporal_distance ~  dispersion + 
-              
+mlong <- lmer(temporal_distance ~  dispersion + 
               (dispersion | site_code / project_name / community_type),
-            data = dat[dat$lifespan=="longer",])
-summary(m25)
-sjp.lmer(m25, type = "fe")
-
+            data = dat[dat$lifespan == "longer",])
+summary(mlong) # yes, still significant effect, more so for longer than not actually
+sjp.lmer(mlong, type = "fe")
 
 
 ### 
 
 
-d <- tapply(dat$dispersion,
-               dat$site_project_comm,
-               mean, na.rm=T)
-dt <- tapply(dat$temporal_distance,
-             dat$site_project_comm,
-             mean, na.rm=T)
 
-summary(lm(dt ~ d))
-plot(d, dt)
-abline(lm(dt ~ d))
+
 # Additional analyses:
 
 # Rarefactions in space and time to show that our data do show real relationship, not underestimating time or space component
@@ -178,10 +126,38 @@ abline(lm(dt ~ d))
 # BC sensitive to abundance. So instead of BC, look at turnover (as a metric not as sensitive to abundance)
 
 # Could add into model: ratio of spatial extent by dataset length
-
-
 # two different studies with either giant plots or giant spatial extent.
 
+
+
+#### Plot overall, not aggregated
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+
+pdf(file.path(figpath, "overall.pdf"), width = 7, height = 5)
+
+ggplot(dat, aes(x = dispersion, y = temporal_distance)) + 
+  xlab("Spatial Heterogeneity") + ylab("Temporal heterogeneity") +
+  geom_point(aes(color = taxa), alpha = 0.7, size = 0.8) + 
+  scale_color_hue(l=40) +
+  theme_bw()
+
+dev.off();system(paste("open", file.path(figpath, "overall.pdf"), "-a /Applications/Preview.app"))
+
+
+# And aquatic vs terrestrial
+
+pdf(file.path(figpath, "aqterr.pdf"), width = 7, height = 5)
+
+ggplot(dat, aes(x = dispersion, y = temporal_distance, group = system)) + 
+  xlab("Spatial Heterogeneity") + ylab("Temporal heterogeneity") +
+  geom_point(aes(color = system), alpha = 0.7, size = 0.8) + 
+  geom_smooth(method = "lm") +
+  scale_color_hue(l=40) +
+  theme_bw()
+
+dev.off();system(paste("open", file.path(figpath, "aqterr.pdf"), "-a /Applications/Preview.app"))
 
 
 # TODO bubbleplots for Scott. Size of bubbles by ... 
@@ -189,9 +165,30 @@ abline(lm(dt ~ d))
 #   plot size       - plot_size..m
 #   total area      - spatial_extent..m2.
 #   total time span - dataset_length
-dat.agg <- aggregate(dat[c("temporal_distance","dispersion","spatial_extent","dataset_length","J")], 
+
+dat.agg <- aggregate(dat[c("temporal_distance","dispersion","spatial_extent","time_step","dataset_length","J","S","ANPP","MAP_mm","temp_C")], 
                      dat[c("site_code","project_name","community_type")],
                      mean, na.rm=T)
+
+leng <- aggregate(dat[,"temporal_distance"], 
+                     dat[c("site_code","project_name","community_type")],
+                     length)
+
+dat.agg <- data.frame(dat.agg, n = leng[,ncol(leng)])
+
+pdf(file.path(figpath, "overallagg.pdf"), width = 7, height = 5)
+
+ggplot(dat.agg, aes(x = dispersion, y = temporal_distance)) + 
+    xlab("Spatial Heterogeneity") + ylab("Temporal heterogeneity") +
+    geom_point(aes(size = n, color = dataset_length), alpha = 0.8) + 
+  scale_size_area(max_size = 15) +
+  #scale_color_hue(l=40) +
+  theme_bw()
+
+dev.off();system(paste("open", file.path(figpath, "overallagg.pdf"), "-a /Applications/Preview.app"))
+
+
+
 
 colz = as.numeric(dat.agg$site_code)
 ccolz = rainbow(n = length(unique(colz)), v = 0.5, alpha = 0.7)[colz]
