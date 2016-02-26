@@ -176,3 +176,20 @@ pdf("SpatialTemporal_byInterval.pdf")
  
  dev.off()
  
+ 
+### Calculate richness within a plot and year ###
+
+# Calculate richness and evenness in a year and sitesubplot 
+ datrich <- dat %>%
+   filter(abundance > 0) %>%
+   mutate(rich = 1) %>%
+   group_by(sitesubplot, site_code, site_project_comm, experiment_year) %>%
+   summarize(plotrich = sum(rich), plotShannon=diversity(abundance), plotJ=plotShannon/log(plotrich))
+ 
+ # Average richness and eveness across a project within a year
+ plotDiv <- datrich %>%
+   tbl_df() %>%
+   group_by(site_code, site_project_comm, experiment_year) %>%
+   summarize(rich = mean(plotrich, na.rm=T), shannon = mean(plotShannon, na.rm=T), J = mean(plotJ, na.rm=T))
+   
+ 
