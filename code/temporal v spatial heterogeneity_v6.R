@@ -517,4 +517,220 @@ ggplot(data=spaceTimeEven, aes(x=dispersion, y=temporal_distance, colour=temp_C)
   geom_smooth(method=lm, colour='black', size=2, aes(group=1, se=T)) +
   facet_wrap(~system)
 
+#######
+#######
+####### WITH PRESENT ABSENT DATA
+#######
+#######
+#######
 
+alldata4 <- read.csv('~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_12012015_cleaned.csv')
+
+presabs<-alldata4%>%
+  gather(species, abund, sp1:sp99)%>%
+  filter(abund>0)%>%
+  mutate(present=1)
+  
+#make year as factor
+expt.list=data.frame(expt=levels(droplevels(presabs$site_project_comm)))
+
+newYear <- data.frame(row.names=1)
+
+for(i in 1:length(expt.list$expt)) {
+  
+  dataset=presabs[presabs$site_project_comm==as.character(expt.list$expt[i]),]
+  names(dataset)[names(dataset)=='experiment_year'] <- 'year'
+  dataset$experiment_year<- as.numeric(as.factor(dataset$year))
+  newYear=rbind(dataset, newYear)
+  
+}
+
+alldata2 <- newYear
+
+# makes a label for each unique year in each community, project, site
+alldata2$label=as.factor(paste(alldata2$site_code, alldata2$project_name, alldata2$community_type, alldata2$experiment_year, sep="::"))
+
+#makes a dataframe with just the experiment descriptor variables (e.g., plot_mani, factors manipulated, etc)
+
+# DF: what is species_num from? not an R object. Should this be the sum from alldata2? 
+
+expInfo <- alldata2 %>%
+  select(site_code, project_name, community_type) %>%
+  unique()%>%
+  mutate(label=as.factor(paste(site_code, project_name, community_type, sep="::")))
+
+
+presabs_wide<-alldata2%>%
+  select(-X, -abund)%>%
+  spread(species, present, fill=0)
+
+#########################
+#calculate spatial heterogeneity for each site, project, community, and year
+
+#makes a new dataframe with just the label; here, expt.year includes all site, project, community, exp yr, trt yr designations
+expt.year.list=data.frame(expt.year=levels(droplevels(presabs_wide$label))) 
+
+#makes an empty dataframe
+spatialHetero=data.frame(row.names=1) 
+
+#be sure to change which columns are species columns!!
+colnames(presabs_wide) 
+
+#get bray curtis dissimilarity values for each site, project, community, and year
+for(i in 1:length(expt.year.list$expt.year)) {
+  
+  #create a dataset for each unique year, experiment combination
+  dataset=presabs_wide[presabs_wide$label==as.character(expt.year.list$expt.year[i]),]
+  
+  #subset only columns with species data in them
+  species=dataset[,10:400]
+  
+  # species <- species[,colSums(species) > 0]
+  
+  #calculate bray-curtis dissimilarity
+  jac=vegdist(species, method='jaccard',diag=F, upper=TRUE)
+  
+  #   #calculate distances to centroid (i.e., dispersion)
+  #   disp=betadisper(bc, dataset$treatment, type="centroid")
+  
+  #dataframe of bray curtis dissimilarities among plots in each year, exp
+  jac.d=as.data.frame(as.matrix(jac)) 
+  
+  #melt dataframe
+  jac.d$names <- row.names(jac.d)
+  
+  #get matrix in long form
+  #this has all combinantions 2x, which will not affect average but could affect other calcualtions like standard error b/c of different n
+  jacSpatialMelt <- melt(jac.d, id='names', variable.name='plot', value.name='spatial_distance')%>%
+    filter(names!=plot)
+  
+  #collecting and labeling distances
+  dispersion=data.frame(data.frame(expt.year=expt.year.list$expt.year[i], 
+                                   names=jacSpatialMelt$names,
+                                   spatial_distance=jacSpatialMelt$spatial_distance))
+  
+  #pasting dispersions into the dataframe made for this analysis
+  spatialHetero=rbind(dispersion, spatialHetero)
+  
+}
+
+###mean spatial heterogeneity for a site in a year across all reps (i.e., mean across all bray-curtis of each rep to all other reps)
+spatialHeteroInfo<- ddply(spatialHetero, c('expt.year'), summarise,
+                          dispersion=mean(spatial_distance))%>%
+  separate(expt.year, into=c("site_code", "project_name", "community_type", "experiment_year"), sep="::")%>%
+  mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))
+
+
+####################################
+#calculate temporal heterogeneity for each site, project, and community
+
+#melt and reshape data to get means of all species
+
+allMelt <- presabs_wide%>%
+  gather(species, present, sp1:sp99)
+
+allMelt_mean<-aggregate(present~experiment_year+site_project_comm+species, sum, data=allMelt)
+
+allMelt2<-allMelt_mean%>%
+  filter(present>0)%>%
+  mutate(pres=1)%>%
+  select(-present)%>%
+  spread(species, pres, fill=0)
+  
+
+###using codyn package
+# meanAbundanceLong <- melt(meanAbundance, id=c('site_code', 'project_name', 'community_type', 'calendar_year', 'experiment_year', 'data_type', 'site_project', 'label'), variable.name='species', value.name='abundance')
+# meanAbundanceLong$site_project_comm <- with(meanAbundanceLong, paste(site_code, project_name, community_type, sep='_'))
+
+# rateChange <- rate_change(meanAbundanceLong, time.var='experiment_year', species.var='species', abundance.var='abundance', replicate.var='site_project_comm')
+
+# turnover <- turnover(meanAbundanceLong, time.var='experiment_year', species.var='species', abundance.var='abundance', replicate.var='site_project_comm', metric='total')
+# names(turnover)[names(turnover)=='total'] <- 'total_turnover'
+
+
+#using converge/diverge methods
+#makes a new dataframe with just the label; here, expt.year includes all site, project, community, exp yr, trt yr designations
+expt.list=data.frame(expt=levels(droplevels(allMelt2$site_project_comm))) 
+
+#makes an empty dataframe
+temporalHetero=data.frame(row.names=1) 
+
+colnames(allMelt2)
+
+#get bray curtis dissimilarity values for each site, project, community, and year
+for(i in 1:length(expt.list$expt)) {
+  
+  #create a dataset for each unique year, experiment combination
+  dataset=allMelt2[allMelt2$site_project_comm==as.character(expt.list$expt[i]),]
+  
+  #need this to keep track of year
+  labels=unique(dataset[,'experiment_year'])
+  
+  #subset only columns with species data in them
+  species=dataset[,c(1,3:393)]
+  
+  #get list of each experiment year
+  rownames <- allMelt2[,1]
+  
+  row.names(species)<-species$experiment_year
+  
+  #calculate bray-curtis dissimilarity
+  jac=vegdist(species[,2:392], method='jaccard', diag=F, upper.tri=T)
+  
+  #dataframe of bray curtis dissimilarities among years in each exp
+  jac.d=as.data.frame(as.matrix(jac))
+  
+  #give experiment year names to rows
+  jac.d$year1 <- row.names(jac.d)
+  
+  #get matrix in long form
+  jacMelt <- melt(jac.d, id='year1', variable.name='year2', value.name='temporal_distance')
+  
+  #collecting and labeling distances
+  dispersion=data.frame(data.frame(expt=expt.list$expt[i], 
+                                   year1=jacMelt$year1,
+                                   year2=jacMelt$year2,
+                                   temporal_distance=jacMelt$temporal_distance))
+  
+  #pasting dispersions into the dataframe made for this analysis
+  temporalHetero=rbind(temporalHetero, dispersion)
+  
+}
+
+temporalHetero$year1_num <- as.numeric(as.character(temporalHetero$year1))
+temporalHetero$year2_num <- as.numeric(as.character(temporalHetero$year2))
+
+temporalHetero$next_year <- temporalHetero$year2_num - temporalHetero$year1_num
+
+temporalHeteroRealYears <- subset(temporalHetero, subset=(next_year==1))%>%
+  select(expt, temporal_distance, year1_num)
+names(temporalHeteroRealYears)[names(temporalHeteroRealYears)=="expt"] <- "site_project_comm"
+names(temporalHeteroRealYears)[names(temporalHeteroRealYears)=="year1_num"] <- "experiment_year"
+
+
+#####################################
+#merge spatial and temporal
+
+# #turnover
+# spaceTurnover <- merge(spatialHeteroInfo, turnover, by=c('site_project_comm', 'experiment_year'))
+# 
+# #rate change (mean spatial through time)
+# spaceRateChange <- merge(spatialHeteroInfo, rateChange, by=c('site_project_comm'))
+# spaceRateChangeMean <- ddply(spaceRateChange, c('site_project_comm', 'site_code', 'project_name', 'community_type'), summarise,
+#                              rate_change=mean(rate_change),
+#                              dispersion_mean=mean(dispersion))
+
+#converge/diverge method
+spaceTime <- merge(spatialHeteroInfo, temporalHeteroRealYears, by=c('site_project_comm', 'experiment_year'), all=T)
+
+spaceTime2<-spaceTime%>%
+  mutate(jac_disp=dispersion,
+         jac_tempdist=temporal_distance)%>%
+  select(-dispersion, -temporal_distance)
+
+old<-read.csv('~/Dropbox/CoDyn/R files/11_06_2015_v7/spatial_temporal_heterogeneity_diversity.csv')
+
+presabsResults<-merge(spaceTime2, old, by=c("site_code","project_name","community_type","site_project_comm","experiment_year"))
+
+
+write.csv(presabsResults,'~/Dropbox/CoDyn/R files/11_06_2015_v7/PresentAbsent_spatial_temporal_heterogeneity_diversity.csv')
