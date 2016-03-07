@@ -272,11 +272,11 @@ leng <- aggregate(dat[,"temporal_distance"],
 
 dat.agg <- data.frame(dat.agg, n = leng[,ncol(leng)])
 
-pdf(file.path(figpath, "overallagg.pdf"), width = 7, height = 5)
+pdf(file.path(figpath, "overallagg.pdf"), width = 10, height = 6)
 
 ggplot(dat.agg, aes(x = dispersion, y = temporal_distance)) + 
     xlab("Spatial Heterogeneity") + ylab("Temporal heterogeneity") +
-    geom_point(aes(size = n, color = dataset_length), alpha = 0.8) + 
+    geom_point(aes(size = log2(spatial_extent), col = dataset_length), alpha = 0.8) + 
   scale_size_area(max_size = 15) +
   #scale_color_hue(l=40) +
   theme_bw()
