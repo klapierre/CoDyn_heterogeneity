@@ -35,6 +35,8 @@
 
 Overall relationship between spatial and temporal heterogeneity
 
+Dispersion (spatial heterogeneity) is the single largest factor in driving temporal heterogeneity. Lifespan of organism, spatial extent, time step, biome all exert only weak effects on this relationship. Spatial heterogeneity is related to evenness at site and plot level. 
+
 \includegraphics[width=400px]{overall}
 
 
@@ -42,7 +44,6 @@ Overall relationship between spatial and temporal heterogeneity
 Overall relationship, aggregated by study.
 
 \includegraphics[width=400px]{overallagg}
-
 
 
 \newpage
@@ -105,9 +106,66 @@ Table 2. System and organism-level features as covariates of effect of spatial h
 \end{table}
 \FloatBarrier
 
+
 Figure 5. Summary of mixed-effect model for taxonomic and ecosystem type system features 
 
 \includegraphics[width=280px]{systemmodel}
+
+
+Table 3. Interaction between plot-level evenness, site-level evenness, and dispersion. There is an interaction between dispersion and evenness, such that including effects of plot-level evenness and site-level evenness does reduce the predictive power of dispersion itself, when no other factors are included. 
+
+\FloatBarrier
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrr}
+  \hline
+ & Estimate & Std. Error & t value \\ 
+  \hline
+(Intercept) & 0.13 & 0.06 & 2.05 \\ 
+  dispersion & 0.14 & 0.15 & 0.99 \\ 
+  J & -0.03 & 0.19 & -0.16 \\ 
+  plotJ & 0.13 & 0.18 & 0.72 \\ 
+  dispersion:J & 0.15 & 0.37 & 0.39 \\ 
+  dispersion:plotJ & -0.12 & 0.32 & -0.38 \\ 
+   \hline
+\end{tabular}
+\end{table}
+\FloatBarrier
+
+Figure 6. Interaction model
+
+\includegraphics[width=280px]{interaxplot}
+
+Using presence-absence based measure of both temporal and spatial heterogeneity, results are the same
+
+\FloatBarrier
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrr}
+  \hline
+ & Estimate & Std. Error & t value \\ 
+  \hline
+(Intercept) & 0.09 & 0.12 & 0.73 \\ 
+  jac\_disp & 0.56 & 0.16 & 3.38 \\ 
+  S & -0.00 & 0.00 & -3.85 \\ 
+  J & -0.15 & 0.03 & -5.88 \\ 
+   \hline
+\end{tabular}
+\end{table}
+\FloatBarrier
+
+Figure 7. Presence-absence model
+
+\includegraphics[width=280px]{pa-evenness}
+
+
+Map of data sources: All
+
+\includegraphics[width=450px]{BigMap}
+
+Map of data sources: North America only
+
+\includegraphics[width=450px]{NAmap1}
 
 
 

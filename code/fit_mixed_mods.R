@@ -125,11 +125,16 @@ dev.off();system(paste("open", file.path(figpath, "systemmodel.pdf"), "-a /Appli
 xtable(summary(m2)$coefficients)
 
 ##### interaction of evenness and spatial heterogeneity (dispersion)
-m2 <- lmer(temporal_distance ~ dispersion * J + 
+m3 <- lmer(temporal_distance ~ dispersion * J + 
              dispersion * plotJ + 
              (dispersion | site_code / project_name / community_type),
            data = d2)
-sjp.lmer(m2, type = 'fe.std')
+
+xtable(summary(m3)$coefficients)
+
+pdf(file.path(figpath, "interaxplot.pdf"), width = 5, height = 5)
+sjp.lmer(m3, type = 'fe.std')
+dev.off();system(paste("open", file.path(figpath, "interaxplot.pdf"), "-a /Applications/Preview.app"))
 
 ############ For interaction of lifespan and interval
 
@@ -138,6 +143,7 @@ m4 <- lmer(
         ( dispersion | lifespan ),
   data = dat)
 
+summary(m4)
 
 
 ###### Now running with the presence-absence
@@ -152,11 +158,15 @@ summary(m5)
 ranef(m5) # Estimates for the random effects 
 fixef(m5) # Estimate (slopes) 
 
+xtable(summary(m5)$coefficients)
+
+pdf(file.path(figpath, "pa-evenness.pdf"), width = 5, height = 5)
 
 sjp.lmer(m5, type = 'fe.std', 
          axisTitle.x = "Predictors of temporal heterogeneity",
          axisTitle.y = "Effect size",
          fade.ns = F)
+dev.off();system(paste("open", file.path(figpath, "pa-evenness.pdf"), "-a /Applications/Preview.app"))
 
 
 ######### Plot-level richness and evenness
@@ -180,8 +190,8 @@ sjp.lmer(m6, type = 'fe.std',
 
 ggplot(d2, aes(x = dispersion, y = plotJ)) + 
   xlab("Spatial Heterogeneity") + ylab("Plot-levelEvenness") +
-  #geom_point(aes(color = taxa), alpha = 0.7, size = 0.8) + 
-  #scale_color_hue(l=40) +
+  geom_point(aes(color = taxa), alpha = 0.7, size = 0.8) + 
+  scale_color_hue(l=40) +
   theme_bw()
 
 
