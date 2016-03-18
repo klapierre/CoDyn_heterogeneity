@@ -97,7 +97,9 @@ dev.off();system(paste("open", file.path(figpath, "designmodel.pdf"), "-a /Appli
 
 
 # now again, but with organsim and system features as predictors
-m2 <- lmer(temporal_distance ~ dispersion + J +  
+m2 <- lmer(temporal_distance ~ dispersion + 
+             J +  
+             dom + 
              taxa  +
              lifespan + 
              S +
@@ -132,9 +134,47 @@ m3 <- lmer(temporal_distance ~ dispersion * J +
 
 xtable(summary(m3)$coefficients)
 
-pdf(file.path(figpath, "interaxplot.pdf"), width = 5, height = 5)
-sjp.lmer(m3, type = 'fe.std')
-dev.off();system(paste("open", file.path(figpath, "interaxplot.pdf"), "-a /Applications/Preview.app"))
+###### Dominance and evenness. Show dominance w/o evenness, evenness w/o dominance, and both interaction
+
+mdom <- lmer(temporal_distance ~ dispersion +
+               dom +
+               plot_size + 
+               num_plots + 
+               spatial_extent +
+               dataset_length + 
+               time_step + 
+               (dispersion | site_code / project_name / community_type),
+             data = d2)
+
+meve <- lmer(temporal_distance ~ dispersion +
+              J +
+               plot_size + 
+               num_plots + 
+               spatial_extent +
+               dataset_length + 
+               time_step + 
+              (dispersion | site_code / project_name / community_type),
+            data = d2)
+
+mboth <- lmer(temporal_distance ~ dispersion +
+               dom * J +
+                plot_size + 
+                num_plots + 
+                spatial_extent +
+                dataset_length + 
+                time_step + 
+               (dispersion | site_code / project_name / community_type),
+             data = d2)
+
+anova(mdom, meve, mboth) # meve is the worst
+
+pdf(file.path(figpath, "Dom_vs_Eve.pdf"), width = 5, height = 5)
+dontshow = c("plot_size","num_plots","spatial_extent","dataset_length","time_step")
+sjp.lmer(mdom, type = 'fe.std', remove.estimates = dontshow)
+sjp.lmer(meve, type = 'fe.std', remove.estimates = dontshow)
+sjp.lmer(mboth, type = 'fe.std', remove.estimates = dontshow)
+
+dev.off();system(paste("open", file.path(figpath, "Dom_vs_Eve.pdf"), "-a /Applications/Preview.app"))
 
 ############ For interaction of lifespan and interval
 
