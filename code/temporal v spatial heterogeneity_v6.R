@@ -454,12 +454,14 @@ for(i in 1:length(expt.list.year$expt)) {
   H <- as.data.frame(diversity(species))
   S <- as.data.frame(specnumber(species))
   J <- as.data.frame(H/log(S))
+  dom<-max(species)
   
   #collecting and labeling distances
   even=data.frame(data.frame(expt.year=expt.list.year$expt[i],
                              J=J$'diversity(species)',
                              S=S$'specnumber(species)',
-                             H=H$'diversity(species)'
+                             H=H$'diversity(species)',
+                            dom=dom
                              ))
   
   evenness=rbind(evenness, even)
@@ -471,6 +473,18 @@ names(evenness)[names(evenness)=='expt.year'] <- 'label'
 
 spaceTimeEven <- merge(spaceTimeInfo, evenness, by='label')
 spaceTimeEven$log_S <- log(spaceTimeEven$S +1)
+
+##graphs of relationships bewteen dispersion and measures of evenness
+with(spaceTimeEven, plot(dispersion, J))
+with(spaceTimeEven, cor.test(dispersion, J))
+with(spaceTimeEven, plot(dispersion, dom))
+with(spaceTimeEven, cor.test(dispersion, dom))
+with(spaceTimeEven, plot(J, dom))
+with(spaceTimeEven, cor.test(J, dom))
+with(spaceTimeEven, plot(J, S))
+with(spaceTimeEven, cor.test(J, S))
+with(spaceTimeEven, plot(S, dom))
+with(spaceTimeEven, cor.test(S, dom))
 
 write.csv(spaceTimeEven, '~/Dropbox/CoDyn/R files/11_06_2015_v7/spatial_temporal_heterogeneity_diversity.csv')
 
