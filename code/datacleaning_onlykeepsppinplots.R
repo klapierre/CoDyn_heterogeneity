@@ -5,13 +5,15 @@ library(ggplot2)
 
 
 datpath = "~/Dropbox/CoDyn/R files/11_06_2015_v7/" # this likely will be different for different folks
+#for meghan's computer
+setwd("~/Dropbox/CoDyn/R files/11_06_2015_v7")
 
 #read in the data
 
 #for some reason datpath is no longer working for me (LH)
 #bring it latest here:
-rawdat <- read.csv(file.path(datpath, "relative cover_nceas and converge_12012015.csv"), row.names = 1) 
-rawdat <- read.csv( "relative cover_nceas and converge_12012015.csv", row.names = 1) 
+rawdat <- read.csv("relative cover_nceas and converge_02072017.csv") 
+#rawdat <- read.csv( "relative cover_nceas and converge_12012015.csv", row.names = 1) 
 
 # prevdat <-rawdat %>%
 #   tbl_df() %>%
@@ -23,12 +25,8 @@ rawdat <- read.csv( "relative cover_nceas and converge_12012015.csv", row.names 
 dat <-rawdat %>%
 
     tbl_df() %>%
-  
-  # reduce the species columns to a species and abundance column
-  gather(species, abundance, sp1:sp182) %>%
-  
   #remove any zeros
-  filter(abundance>0) %>%
+  filter(relcov>0) %>%
   
   #create a unique "sitesubplot" - is this the same as unid?
   mutate(sitesubplot=paste(site_code, project_name, plot_id, community_type, sep="_")) %>%
@@ -47,11 +45,11 @@ sampled_plots <-rawdat %>%
 dat2<-merge(dat, sampled_plots, id=c("sitesubplot", "experiment_year"), all.y=T)
 
 # a function to fill in 0s for species present in the plot but not that year
-fill_zeros <- function (df, year="year", species="species", abundance="abundance") {
+fill_zeros <- function (df, year="year", species="species", relcov="relcov") {
   nosp <- length(unique(df[,species]))
-  df2 <- df[c(year, species, abundance)] %>%
-    spread(species, abundance, fill=0) %>%
-    gather(species, abundance, 2:(nosp+1))
+  df2 <- df[c(year, species, relcov)] %>%
+    spread(species, relcov, fill=0) %>%
+    gather(species, relcov, 2:(nosp+1))
   return(df2)
 }
 
@@ -63,7 +61,7 @@ out <- mapply(function(x, y) "[<-"(x, "sitesubplot", value = y) ,
               out, ID, SIMPLIFY = FALSE)
 dat3 <- do.call("rbind", out) %>%
   tbl_df() %>%
-  filter(!is.na(species), !is.na(abundance), !is.na(sitesubplot), !is.na(experiment_year))
+  filter(!is.na(species), !is.na(relcov), !is.na(sitesubplot), !is.na(experiment_year))
 
 
 #Check that there are no sitesubplots that had absolutely nothing ever
@@ -79,7 +77,7 @@ dat.key01 <-dat %>%
   unique()
 
 #import experimental data
-expt.info<-read.csv(file.path(datpath, "exptInfo_ecosystem type.csv"))
+expt.info<-read.csv("exptInfo_ecosystem type.csv")
 
 #merge expt.info with the key
 dat.key <- merge (dat.key01, expt.info, all.x=T)
@@ -114,7 +112,7 @@ dat5<-merge(dat4, dat.test1) %>%
 #identify sitesubplots in which all of the species never vary
 dat.test2 <- dat5 %>%
   group_by(sitesubplot, species) %>%
-  summarize(sppvar=var(abundance)) %>%
+  summarize(sppvar=var(relcov)) %>%
   tbl_df() %>%
   mutate(var0=ifelse(sppvar==0, 1, 0)) %>%
   group_by(sitesubplot) %>%
@@ -126,13 +124,14 @@ dat6 <- merge (dat5, dat.test2) %>%
   filter(problem==0) %>%
   select(-problem, -var0)
 
-dat6v2 <-merge(dat.key01, dat6, by="sitesubplot")
-write.csv(dat6v2, "~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_12012015_cleaned_longform.csv")
+dat6v2 <-merge(dat.key01, dat6, by="sitesubplot")%>%
+  select(-totrich, -totcount, -timelength, -sitesubplot, -site_project_comm)
+write.csv(dat6v2, "~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_02072017_cleaned_longform.csv")
 
 
 #has two extra columns (timelength = number of replicate time intervals and totrich = total richness across time series)
 dat7 <- dat6 %>%
- spread(species, abundance, fill=0) %>%
+ spread(species, relcov, fill=0) %>%
  select(-totrich, -timelength, -totcount)
 
 dat8<-merge(dat7, dat.key01, by="sitesubplot")
