@@ -17,7 +17,7 @@ library(dplyr)
 
 # setwd("C:\\Users\\Kim\\Dropbox\\working groups\\community dynamics working group\\CoDyn\\R files\\10_08_2015_v6")
 
-datpath = "~/Dropbox/CoDyn/R files/11_06_2015_v7" 
+setwd("~/Dropbox/CoDyn/R files/11_06_2015_v7")
 
 theme_set(theme_bw())
 theme_update(axis.title.x=element_text(size=20, vjust=-0.35), axis.text.x=element_text(size=16),
@@ -39,7 +39,7 @@ theme_update(axis.title.x=element_text(size=20, vjust=-0.35), axis.text.x=elemen
 
 
 #read in the species composition dataset
-nceas <- read.csv(file.path(datpath, 'NewData_NCEAS_Nov11.csv'))%>%
+nceas <- read.csv('NewData_NCEAS_Nov11.csv')%>%
   select(-X)
 names(nceas)[names(nceas)=='plot'] <- 'plot_id'
 nceas$plot_id <- as.character(nceas$plot_id)# for merging
@@ -73,7 +73,7 @@ nceas_all1<-rbind(fix, luq3)
 nceas_all<-rbind(nceas_all1, ntl)
 
 #converge datasets - remove these datasets because they are too short or we are not allowed to use them
-converge <- read.csv(file.path(datpath, "corre_relcov.csv"))
+converge <- read.csv("corre_relcov.csv")
 finalYear <- aggregate(converge["treatment_year"], by=converge[c("site_code", "project_name", "community_type")], FUN=max)
 eightYear <- subset(finalYear, subset=(treatment_year>=8))
 drop <- c('treatment_year')
@@ -127,20 +127,11 @@ relcov_a<-subset(relcov, subset=(totcov!=0))%>%
   select(unid, species, relcov)%>%
   filter(relcov!=0)
 
-#sally and meghan decided to drop plots with no species (tot cov=0) because.  
-# relcov_b<-subset(relcov, subset=(totcov==0))%>%
-#   mutate(relcov=0)%>%
-#   select(unid, species, relcov)
-#relcov_all<-rbind(relcov_a, relcov_b)
-
-#re-transpose to get species as columns
-relcov3<-dcast(relcov_a, unid ~ species, value.var="relcov")
-relcov3[is.na(relcov3)]<-0
-
 #merge the species data back together with the informational data
-relcov4<-merge(information, relcov3, by="unid")
+relcov_long<-merge(information, relcov_a, by="unid")
 
-write.csv(relcov4, '~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_12012015.csv', row.names=F)
+
+write.csv(relcov_long, '~/Dropbox/CoDyn/R files/11_06_2015_v7/relative cover_nceas and converge_02072017.csv', row.names=F)
 
 
 #then run data thorugh datacleaning step.

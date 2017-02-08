@@ -7,40 +7,50 @@ library(lme4) # for lmer
 library(sjPlot) # for plotting random effects of mixed effects models. install.packages('sjPlot',dep=T)
 library(ggplot2)
 library(xtable) # for making LaTeX formatted tables
-
+library(gridExtra)
+library(grid)
 # Find latest
 
-datpath = file.path("~/Dropbox/CoDyn/R files", sort(dir("~/Dropbox/CoDyn/R files/"), T)[1]) # or we can do URL method per Matt
+datpath = file.path("~/Dropbox/CoDyn/R files/11_06_2015_v7") # or we can do URL method per Matt
 
 figpath = "~/Documents/git/CoDyn_heterogeneity/writing/images"
 
 # -- read in data
-dat <- read.csv(file.path(datpath, 'spatial_temporal_heterogeneity_diversity.csv'), row.names = 1)
+
+#dat <- read.csv(file.path(datpath, 'spatial_temporal_heterogeneity_diversity.csv'), row.names = 1) OLD DATASET
+
+dat<-read.csv(file.path(datpath, 'SpatioTemp_testStatistics_20170208.csv'), row.names = 1)
+dat$lifespan2<-ifelse(dat$lifespan=="longer","long-lived",as.character(dat$lifespan))
+
+names(dat)<- c("site_project_comm","experiment_year","site_code","project_name","community_type","location","Country","Continent","Lat","Long","MAP","Plot_size","Spatial_extent","Successional","Lifespan1","Trophic_level","Taxa","ANPP","Broad_ecosystem_type","Number_plots","MAT","Dataset_legnth","Time_step","Spatial_richness","Spatial_ShannonD","Spatial_ShannonJ","Spatial_dominance","Spatial_evenness","Spatial_heterogeneity","Temporal_heterogeneity","System","Lifespan")
 
 pdat <- read.csv(file.path(datpath, "PresentAbsent_spatial_temporal_heterogeneity_diversity.csv"))
 
 
 # Adding in plot-level evenness and richness, need to recalculate timesteps  (not all of them actually are years). Code from v6 script
-plotlev <- read.csv(file.path(datpath, "RichEvenness_PlotLevel.csv"))
 
-newYear <- data.frame(row.names=1)
 
-for(i in unique(plotlev$site_project_comm)) { 
-  
-  xx = plotlev[plotlev$site_project_comm == i,]
-  xx$experiment_year1 <- as.numeric(as.factor(xx$experiment_year))
-  newYear=rbind(newYear, xx)
-  
-}
-
-plotlev <- newYear
-
-names(plotlev)[which(names(plotlev) == "J")] = "plotJ"
-
-plotlev$uniqueID = paste(plotlev$site_project_comm, plotlev$experiment_year1)
-dat$uniqueID =  paste(dat$site_project_comm, dat$experiment_year)
-
-d2 <- merge(dat, plotlev[c("uniqueID","rich","shannon","plotJ")], by = "uniqueID", all.x = T, all.y = F)
+###we do not need this step anymore - Meghan Feb 8 2017
+# plotlev <- read.csv(file.path(datpath, "RichEvenness_PlotLevel.csv"))
+# 
+# newYear <- data.frame(row.names=1)
+# 
+# for(i in unique(plotlev$site_project_comm)) { 
+#   
+#   xx = plotlev[plotlev$site_project_comm == i,]
+#   xx$experiment_year1 <- as.numeric(as.factor(xx$experiment_year))
+#   newYear=rbind(newYear, xx)
+#   
+# }
+# 
+# plotlev <- newYear
+# 
+# names(plotlev)[which(names(plotlev) == "J")] = "plotJ"
+# 
+# plotlev$uniqueID = paste(plotlev$site_project_comm, plotlev$experiment_year1)
+# dat$uniqueID =  paste(dat$site_project_comm, dat$experiment_year)
+# 
+# d2 <- merge(dat, plotlev[c("uniqueID","rich","shannon","plotJ")], by = "uniqueID", all.x = T, all.y = F)
 
 # Goals:
 
@@ -71,13 +81,13 @@ d2 <- merge(dat, plotlev[c("uniqueID","rich","shannon","plotJ")], by = "uniqueID
 
 # Random slopes for spatial heterogeneity, first by study design variables
 
-m1 <- lmer(temporal_distance ~ dispersion +
-             plot_size + 
-             num_plots + 
-             spatial_extent +
-             dataset_length + 
-             time_step + 
-             (dispersion | site_code / project_name / community_type),
+m1 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity +
+             Plot_size + 
+             Number_plots + 
+             Spatial_extent +
+             Dataset_legnth + 
+             Time_step + 
+             (Spatial_heterogeneity | site_code / project_name / community_type),
            data = dat)
 summary(m1)
 ranef(m1) # Estimates for the random effects 
@@ -85,44 +95,92 @@ fixef(m1) # Estimate (slopes)
 
 
 # Fixed effects table
-xtable(summary(m1)$coefficients)
+t1<-xtable(summary(m1)$coefficients)
+print.xtable(t1, type="html",file="~/Dropbox/CoDyn/R Files/11_06_2015_v7/table1.html")
 
-pdf(file.path(figpath, "designmodel.pdf"), width = 5, height = 5)
-sjp.lmer(m1, type = 'fe.std', 
-         axisTitle.x = "Predictors of temporal heterogeneity",
-         axisTitle.y = "Effect size",
-         fade.ns = F)
-dev.off();system(paste("open", file.path(figpath, "designmodel.pdf"), "-a /Applications/Preview.app"))
-
-
+#pdf(file.path(figpath, "designmodel.pdf"), width = 5, height = 5)
+sjp.setTheme(base=theme_bw())
+p1<-sjp.lmer(m1, type = 'fe.std',
+         fade.ns = T,
+         sort.est="sort.all",
+         title="Experimental predictors",
+         y.offset=.15)
+#dev.off();system(paste("open", file.path(figpath, "designmodel.pdf"), "-a /Applications/Preview.app"))
 
 # now again, but with organsim and system features as predictors
-m2 <- lmer(temporal_distance ~ dispersion + J +  
-             taxa  +
-             lifespan + 
-             S +
-             ANPP + 
-             succession +
-             trophic_level +
-             system +
+#feb 2017 this model looks at the biology of the site overall
+m2 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity + 
+             #taxa  + #confounded with lifespan and system
+             Lifespan + 
+             MAP+
+             #ANPP+ #dropping this b/c have missing data
+             MAT+
+             Successional +
+             Trophic_level +
+             System +
              #system:dispersion +
-             (dispersion | site_code / project_name / community_type),
+             (Spatial_heterogeneity | site_code / project_name / community_type),
             data = dat)
 summary(m2)
 ranef(m2) # Estimates for the random effects 
 fixef(m2) # Estimate (slopes) 
 
+t2<-xtable(summary(m2)$coefficients)
+print.xtable(t2, type="html",file="~/Dropbox/CoDyn/R Files/11_06_2015_v7/table2.html")
 
-pdf(file.path(figpath, "systemmodel.pdf"), width = 5, height = 5)
-sjp.lmer(m2, type = 'fe.std', 
-         axisTitle.x = "Predictors of temporal heterogeneity",
-         axisTitle.y = "Effect size",
-         fade.ns = F)
-dev.off();system(paste("open", file.path(figpath, "systemmodel.pdf"), "-a /Applications/Preview.app"))
+p2<-sjp.lmer(m2, type = 'fe.std',
+             fade.ns = T,
+             sort.est="sort.all",
+             title="Biological predictors",
+             y.offset=.25)
+
+pdf("~/Dropbox/CoDyn/R Files/11_06_2015_v7/Fig2.pdf", width=12, height=6)
+grid.arrange(p1$plot, p2$plot, ncol=2, left=textGrob("Predictors of temporal heterogeneity", rot=90, gp=gpar(fontsize=14)), bottom=textGrob("Standardized effect size", gp=gpar(fontsize=14)))
+dev.off()
 
 
-# Fixed effects table
-xtable(summary(m2)$coefficients)
+###exploring the data
+ggplot(data=dat, aes(x=spatialdispersion, y=temporaldistance))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  geom_abline()+
+  facet_wrap(~lifespan)
+
+ggplot(data=subset(dat, lifespan=="longer"), aes(x=spatialdispersion, y=temporaldistance))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  geom_abline()+
+  facet_wrap(~succession)
+
+###we decided that since bray-curtis is related to richness and evenness we are not going to look at these aspects of the community.
+
+# m3 <- lmer(temporaldistance ~ spatialdispersion + 
+#              spatial_evenness + 
+#              #spatial_J+
+#              #spatial_dominance + 
+#              #taxa  +
+#              #lifespan + 
+#              log(spatial_rich) + #we are dropping this b/c of varying spatial extent of datasets
+#              #MAP_mm+
+#              #ANPP+
+#              #temp_C+
+#              #succession +
+#              #trophic_level +
+#              #system +
+#              #system:dispersion +
+#              (spatialdispersion | site_code / project_name / community_type),
+#            data = dat)
+# #pdf(file.path(figpath, "systemmodel.pdf"), width = 5, height = 5)
+# p3<-sjp.lmer(m3, type = 'fe.std',
+#          fade.ns = T,
+#          sort.est="sort.all",
+#          title="Biological Predictors",
+#          y.offset=.25,
+#          axisTitle.x = "Predictors of Temporal Heterogeneity",
+#          axisTitle.y = "Standardized Effect Size")
+#dev.off();system(paste("open", file.path(figpath, "systemmodel.pdf"), "-a /Applications/Preview.app"))
+
+
 
 ##### interaction of evenness and spatial heterogeneity (dispersion)
 m3 <- lmer(temporal_distance ~ dispersion * J + 
@@ -132,9 +190,47 @@ m3 <- lmer(temporal_distance ~ dispersion * J +
 
 xtable(summary(m3)$coefficients)
 
-pdf(file.path(figpath, "interaxplot.pdf"), width = 5, height = 5)
-sjp.lmer(m3, type = 'fe.std')
-dev.off();system(paste("open", file.path(figpath, "interaxplot.pdf"), "-a /Applications/Preview.app"))
+###### Dominance and evenness. Show dominance w/o evenness, evenness w/o dominance, and both interaction
+
+mdom <- lmer(temporal_distance ~ dispersion +
+               dom +
+               plot_size + 
+               num_plots + 
+               spatial_extent +
+               dataset_length + 
+               time_step + 
+               (dispersion | site_code / project_name / community_type),
+             data = d2)
+
+meve <- lmer(temporal_distance ~ dispersion +
+              J +
+               plot_size + 
+               num_plots + 
+               spatial_extent +
+               dataset_length + 
+               time_step + 
+              (dispersion | site_code / project_name / community_type),
+            data = d2)
+
+mboth <- lmer(temporal_distance ~ dispersion +
+               dom * J +
+                plot_size + 
+                num_plots + 
+                spatial_extent +
+                dataset_length + 
+                time_step + 
+               (dispersion | site_code / project_name / community_type),
+             data = d2)
+
+anova(mdom, meve, mboth) # meve is the worst
+
+pdf(file.path(figpath, "Dom_vs_Eve.pdf"), width = 5, height = 5)
+dontshow = c("plot_size","num_plots","spatial_extent","dataset_length","time_step")
+sjp.lmer(mdom, type = 'fe.std', remove.estimates = dontshow)
+sjp.lmer(meve, type = 'fe.std', remove.estimates = dontshow)
+sjp.lmer(mboth, type = 'fe.std', remove.estimates = dontshow)
+
+dev.off();system(paste("open", file.path(figpath, "Dom_vs_Eve.pdf"), "-a /Applications/Preview.app"))
 
 ############ For interaction of lifespan and interval
 
