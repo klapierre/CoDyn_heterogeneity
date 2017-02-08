@@ -160,7 +160,7 @@ t2<-xtable(summary(m2)$coefficients)
 print.xtable(t2, type="html",file="~/Dropbox/CoDyn/R Files/11_06_2015_v7/table2.html")
 
 #figure
-p3<-sjp.lmer(m2, type = 'fe.std',
+p3<-sjp.lmer(m3, type = 'fe.std',
              fade.ns = T,
              sort.est="sort.all",
              title="Biological predictors",
