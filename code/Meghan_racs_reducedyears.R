@@ -23,12 +23,14 @@ dat3<-dat%>%
   #remove any non-existent sites (ie, NAs at the end of the excel spreadsheet)
   filter(!is.na(sitesubplot))
 
-  #Get 1 time step per year for all the aquatic data.
 dat2<-dat3%>%
-  mutate(year=trunc(experiment_year))%>%
-  tbl_df()%>%
-  group_by(site_code,project_name,community_type, site_project_comm, sitesubplot, year,plot_id,species)%>%
-  summarize(abundance=max(abundance))
+  mutate(year=experiment_year)
+#Get 1 time step per year for all the aquatic data.
+## April 2016 - NO longer doing this becuase it made some of the phyto communities have very high species richness.
+#   mutate(year=trunc(experiment_year))%>%
+#   tbl_df()%>%
+#   group_by(site_code,project_name,community_type, site_project_comm, sitesubplot, year,plot_id,species)%>%
+#   summarize(abundance=max(abundance))
 
 ##Calculate three basic diversity measures, richness (S), Shannon's Diversity (H), and Evenness(J)
 
@@ -87,6 +89,7 @@ out1<-cbind(H, S)
 output<-cbind(out1, SimpEven)
 DiversityMeasures_ave<-cbind(avedat.key, output)
 
+plot(S, SimpEven)
 
 #merge all to a singe dataframe
 # Jmeans$siteprojcom<-as.character(with(Jmeans, paste(site_code, project_name, community_type, sep="_")))
@@ -153,7 +156,8 @@ turnover2<-turnover(ave, replicate.var="siteprojcom")
 gainave<-turnover(ave, replicate.var="siteprojcom", metric="appearance")
 lossave<-turnover(ave, replicate.var="siteprojcom", metric="disappearance")
 
-
+turn1<-merge(turnover2, gainave, by=c("siteprojcom", "year"))
+turn<-merge(turn1, lossave, by=c("siteprojcom","year"))
 
 ggplot(turnover2, aes(x=year, y=total))+
   geom_point(size=4)+
@@ -182,7 +186,9 @@ ggplot(lossave, aes(x=year, y=disappearance))+
 rank<-mean_rank_shift(ave, replicate.var = "siteprojcom")
 
 rank2<-rank%>%
-  separate(year_pair, c("year1","year2"), sep="-", remove=F)
+  separate(year_pair, c("year1","year"), sep="-", remove=F)
+
+turnrank<-merge(rank2, turn, by=c("siteprojcom","year"))
 
 ggplot(rank2, aes(x=year1, y=MRS))+
   geom_point(size=4)+
@@ -199,12 +205,23 @@ dom<-ave%>%
   group_by(siteprojcom, year)%>%
   summarize(dom=max(abundance))
 
+domturnrank<-merge(turnrank, dom, by=c("siteprojcom","year"), all=T)
+
 ggplot(dom, aes(x=year, y=dom))+
   geom_point(size=4)+
   scale_y_continuous(limits=c(0,1))+
   xlab("Year")+
   ylab("Dominance")+
   facet_wrap(~siteprojcom, ncol=7, scales="free")
+
+####relationship between community dynamic measures
+
+allmetrics<-merge(DiversityMeasures_ave, domturnrank, by=c("siteprojcom","year"))%>%
+  select(-year1, -year_pair)
+
+pairs(allmetrics[,7:13])
+
+phytos<-subset(ave, siteprojcom=="GLK_PHYTOS_ERIE_0"&year==2012)
 
 ###for SESYNC March 2016 Talk
 
