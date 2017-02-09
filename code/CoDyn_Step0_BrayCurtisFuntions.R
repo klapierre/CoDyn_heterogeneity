@@ -9,6 +9,7 @@
 #' four two-year time lags (year 1 vs year 3, year 2 vs year 4 ...) and so forth. 
 #' These distance values are regressed against the time lag interval. 
 #' The slope of the regression line is reported as an indication of the rate and direction of compositional change in the community.
+#' This code is adapted from the rate_change function on library("codyn")
 #' @param df A data frame containing time, species and abundance columns and an optional column of replicates
 #' @param time.var The name of the time column 
 #' @param species.var The name of the species column 
@@ -29,6 +30,7 @@
 #' which returns the full set of community distance values and associated time lag intervals.
 #' @references 
 #' Collins, S. L., Micheli, F. and Hartt, L. 2000. A method to determine rates andpatterns of variability in ecological communities. - Oikos 91: 285-293. 
+#' Hallett, Lauren M., Sydney K. Jones, A. Andrew A. MacDonald, Matthew B. Jones, Dan F. B. Flynn, Julie Ripplinger, Peter Slaughter, Corinna Gries, and Scott L. Collins. “Codyn: An R Package of Community Dynamics Metrics.” Methods in Ecology and Evolution, April 2016, n/a-n/a. doi:10.1111/2041-210X.12569.
 #' @examples 
 #' data(knz_001d)
 #' rate_change(knz_001d[knz_001d$subplot=="A_1",]) # for one subplot
