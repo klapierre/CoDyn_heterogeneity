@@ -207,7 +207,8 @@ dataout %>%
 
 # Subset rateout to only minimum length of a dataset
 rateout2 <- rateout %>%
-  filter(interval <= 6)
+  filter(interval <= 6) 
+
 
 a <- ggplot(subset(rateout2, interval ==1), aes(x=dispersion, y=distance)) + 
   geom_point(color = "black", size = .5) +
@@ -229,3 +230,29 @@ grid.arrange(a + xlab("") + theme(axis.text.x=element_blank())  ,
 #dev.off()
 
 ### Notes: Labeled panels and cleaned up legend offline
+
+
+##################################################################
+########### ANALYZE DIFFERENCES IN THE SLOPES BY INTERVAL ########
+
+# make a column where interval is a factor
+rateout2$facinterval <- as.factor(rateout2$interval)
+
+
+# mixed effect model to look at the interaction within subannual
+m_subannual <- lme(distance ~  dispersion*facinterval, 
+         random =  ~1|site_code / project_name / community_type, 
+          data = subset(rateout2, lifespan2 == "Subannual"))
+summary(m_subannual)
+
+# mixed effect model to look at the interaction within annual
+m_annual <- lme(distance ~  dispersion*facinterval, 
+         random =  ~1|site_code / project_name / community_type, 
+         data = subset(rateout2, lifespan2 == "Annual"))
+summary(m_annual)
+
+# mixed effect model to look at the interaction within long-lived
+m_long <- lme(distance ~  dispersion*facinterval, 
+         random =  ~1|site_code / project_name / community_type, 
+         data = subset(rateout2, lifespan2 == "Long-lived"))
+summary(m_long)
