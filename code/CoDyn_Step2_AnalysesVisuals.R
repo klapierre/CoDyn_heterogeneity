@@ -40,6 +40,7 @@ m1 <- lmer(Temporal_heterogeneity ~ 1 +
              (Spatial_heterogeneity | site_code / project_name / community_type),
            data = dataout)
 
+
 # compare null and actual
 anova(m.null, m1)
 
@@ -121,6 +122,16 @@ ggplot(dat.plot,
 
 ## Model 2 using the experimental parameters
 
+# m2 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity +
+#              Plot_size + 
+#              Number_plots + 
+#              Spatial_extent +
+#              Dataset_legnth + 
+#              Time_step + 
+#              (Spatial_heterogeneity | site_code / project_name / community_type),
+#            data = dataout)
+
+## ONLY RANDOM INTERCEPT
 m2 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity +
              Plot_size + 
              Number_plots + 
@@ -147,6 +158,20 @@ p2 <- sjp.lmer(m2, type = 'fe.std',
              y.offset=.15)
 
 ## Model 3 using biological parameters about the site
+# m3 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity + 
+#              #taxa  + #confounded with lifespan and system
+#              Lifespan + 
+#              MAP+
+#              #ANPP+ #dropping this b/c have missing data
+#              MAT+
+#              Successional +
+#              Trophic_level +
+#              System +
+#              #system:dispersion +
+#              (Spatial_heterogeneity | site_code / project_name / community_type),
+#            data = dataout)
+
+## ONLY RANDOM INTERCEPT
 m3 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity + 
              #taxa  + #confounded with lifespan and system
              Lifespan + 
@@ -157,7 +182,7 @@ m3 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity +
              Trophic_level +
              System +
              #system:dispersion +
-             (Spatial_heterogeneity | site_code / project_name / community_type),
+             (1 | site_code / project_name / community_type),
            data = dataout)
 summary(m3)
 ranef(m3) # Estimates for the random effects 
@@ -245,11 +270,20 @@ m_subannual <- lme(distance ~  dispersion*facinterval,
           data = subset(rateout2, lifespan2 == "Subannual"))
 summary(m_subannual)
 
+m_subannual <- lme(distance ~  dispersion*facinterval, 
+                   random =  ~1+facinterval|site_code / project_name / community_type, 
+                   data = subset(rateout2, lifespan2 == "Subannual"))
+summary(m_subannual)
+
+
+(value~time,random=~1+time|subject
 # mixed effect model to look at the interaction within annual
 m_annual <- lme(distance ~  dispersion*facinterval, 
          random =  ~1|site_code / project_name / community_type, 
          data = subset(rateout2, lifespan2 == "Annual"))
 summary(m_annual)
+
+
 
 # mixed effect model to look at the interaction within long-lived
 m_long <- lme(distance ~  dispersion*facinterval, 
