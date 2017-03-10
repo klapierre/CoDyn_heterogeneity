@@ -250,13 +250,21 @@ process_dp1 <- function() {
     eml <- add_geocoverage_eml(eml)
 
     # Document and add the first data file to the package
-    file_name <- "relative_cover_NCEAS_and_converge_12012015_cleaned.csv"
+    file_name <- "relative_cover_NCEAS_and_converge_12012015_long.csv"
     file_description <- "Long-tem community composition data"
     file_path <- sprintf("%s/%s", dataDir, file_name)
     do1 <- new("DataObject", format="text/csv", filename=file_path,
                mediaType="text/csv", suggestedFilename=file_name)
     eml <- add_entity_eml(eml, file_name, file_description, file_path, do1@sysmeta@identifier, cn@endpoint)
 
+    # Create a DataObject to hold the script file and add it to the EML file
+    file_name <- "convertToMatrix.R"
+    file_description <- "R script that reformats the relative_cover_NCEAS_and_converge_12012015_long.csv into a matrix style wide table with species as columns headings"
+    file_path <- sprintf("%s/%s", dataDir, file_name)
+    progObj <- new("DataObject", format="application/R", filename=file_path,
+                   mediaType="text/x-rsrc", suggestedFilename=file_name)
+    eml <- add_entity_eml(eml, file_name, file_description, file_path, progObj@sysmeta@identifier, cn@endpoint)
+    
     # Set the package identifier
     eml_id <- paste0("urn:uuid:", uuid::UUIDgenerate())
     eml@packageId <- new("xml_attribute", eml_id)
