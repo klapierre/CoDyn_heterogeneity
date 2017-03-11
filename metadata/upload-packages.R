@@ -1,4 +1,4 @@
-# Upload data packages for Sevilleta community dynamics
+# Upload data packages for Space Time heterogeneity community dynamics
 
 library(datapack)
 library(EML)
@@ -250,13 +250,22 @@ process_dp1 <- function() {
     eml <- add_geocoverage_eml(eml)
 
     # Document and add the first data file to the package
-    file_name <- "relative_cover_NCEAS_and_converge_12012015_long.csv"
+    file_name <- "relative_cover_nceas_and_converge_12012015_long.csv"
     file_description <- "Long-tem community composition data"
     file_path <- sprintf("%s/%s", dataDir, file_name)
     do1 <- new("DataObject", format="text/csv", filename=file_path,
                mediaType="text/csv", suggestedFilename=file_name)
     eml <- add_entity_eml(eml, file_name, file_description, file_path, do1@sysmeta@identifier, cn@endpoint)
 
+    # Document and add the second data file to the package
+    file_name <- "siteinfo_key.csv"
+    file_description <- "detailed information for each sampling site"
+    file_path <- sprintf("%s/%s", dataDir, file_name)
+    do2 <- new("DataObject", format="text/csv", filename=file_path,
+               mediaType="text/csv", suggestedFilename=file_name)
+    eml <- add_entity_eml(eml, file_name, file_description, file_path, do2@sysmeta@identifier, cn@endpoint)
+
+    
     # Create a DataObject to hold the script file and add it to the EML file
     file_name <- "convertToMatrix.R"
     file_description <- "R script that reformats the relative_cover_NCEAS_and_converge_12012015_long.csv into a matrix style wide table with species as columns headings"
@@ -264,6 +273,7 @@ process_dp1 <- function() {
     progObj <- new("DataObject", format="application/R", filename=file_path,
                    mediaType="text/x-rsrc", suggestedFilename=file_name)
     eml <- add_entity_eml(eml, file_name, file_description, file_path, progObj@sysmeta@identifier, cn@endpoint)
+
     
     # Set the package identifier
     eml_id <- paste0("urn:uuid:", uuid::UUIDgenerate())
@@ -279,6 +289,78 @@ process_dp1 <- function() {
 }
 
 process_dp2 <- function() {
+  
+  # Create a DataPackage to hold all of the objects
+  dp <- new("DataPackage")
+  dataDir <- paste(getwd(), "metadata", sep = "/")
+  setwd(dataDir)
+  eml_file <- sprintf("%s/dp2-metadata.xml", dataDir)
+  title <- "Temporal heterogeneity increases with spatial heterogeneity in ecological communities"
+  pubDate <- "2017"
+  file_ext <- "dp2"
+  keywords <- c("species names", "populations", "communities", "community", "heterogeneity", "temporal", "spatial")
+  
+  eml <- create_eml(title, pubDate, file_ext, keywords, dataDir)
+  eml <- add_people_eml(eml, file_ext)
+  eml <- add_geocoverage_eml(eml)
+  
+  # Document and add the data file to the package
+  file_name <- "SpatioTemp_testStatistics_20170208.csv"
+  file_description <- "Community heterogeneity dataset"
+  file_path <- sprintf("%s/%s", dataDir, file_name)
+  do1 <- new("DataObject", format="text/csv", filename=file_path,
+             mediaType="text/csv", suggestedFilename=file_name)
+  eml <- add_entity_eml(eml, file_name, file_description, file_path, do1@sysmeta@identifier, cn@endpoint)
+  
+  # Create a DataObject to hold the script file and add it to the EML file
+  file_name <- "Analyses_and_Figures.R"
+  file_description <- "Analyses for the figures in paper"
+  file_path <- sprintf("%s/%s", dataDir, file_name)
+  progObj1 <- new("DataObject", format="application/R", filename=file_path,
+                 mediaType="text/x-rsrc", suggestedFilename=file_name)
+  eml <- add_entity_eml(eml, file_name, file_description, file_path, progObj1@sysmeta@identifier, cn@endpoint)
+  
+  # Create a DataObject to hold the script file and add it to the EML file
+  file_name <- "SpaceTime_generateVariables.R"
+  file_description <- "calculate variables for figure 3"
+  file_path <- sprintf("%s/%s", dataDir, file_name)
+  progObj2 <- new("DataObject", format="application/R", filename=file_path,
+                 mediaType="text/x-rsrc", suggestedFilename=file_name)
+  eml <- add_entity_eml(eml, file_name, file_description, file_path, progObj2@sysmeta@identifier, cn@endpoint)
+
+  # Document and add the figure 1 to the package
+  file_name <- "Fig1.jpg"
+  file_description <- "Relationship between spatial heterogeneity and temporal heterogeneity in aquatic (blue) and terrestrial (green) systems."
+  file_path <- sprintf("%s/%s", dataDir, file_name)
+  do2 <- new("DataObject", format="image/jpg", filename=file_path,
+             mediaType="image/png", suggestedFilename=file_name)
+  eml <- add_entity_eml(eml, file_name, file_description, file_path, do2@sysmeta@identifier, cn@endpoint)
+  
+  # Document and add the figure 2 to the package
+  file_name <- "Fig2.jpg"
+  file_description <- "Effects of spatial heterogeneity and (left) experimental or (right) biological predictors on temporal heterogeneity. "
+  file_path <- sprintf("%s/%s", dataDir, file_name)
+  do3 <- new("DataObject", format="image/jpg", filename=file_path,
+             mediaType="image/png", suggestedFilename=file_name)
+  eml <- add_entity_eml(eml, file_name, file_description, file_path, do3@sysmeta@identifier, cn@endpoint)
+  
+  # Document and add the figure 3 to the package
+  file_name <- "Fig3.jpg"
+  file_description <- "Relationship between spatial heterogeneity and temporal heterogeneity by lifespan and over time."
+  file_path <- sprintf("%s/%s", dataDir, file_name)
+  do4 <- new("DataObject", format="image/jpg", filename=file_path,
+             mediaType="image/png", suggestedFilename=file_name)
+  eml <- add_entity_eml(eml, file_name, file_description, file_path, do4@sysmeta@identifier, cn@endpoint)
+  
+  # Set the package identifier
+  eml_id <- paste0("urn:uuid:", uuid::UUIDgenerate())
+  eml@packageId <- new("xml_attribute", eml_id)
+  eml@system <- new("xml_attribute", "knb")
+  
+  # Validate the eml and write it to disk
+  eml_validate(eml)
+  write_eml(eml, eml_file)
+  
 
 }
 
@@ -473,10 +555,12 @@ add_entity_eml <- function(eml, entity_name, entity_description, file_path, iden
 
         #physical parameter for standard Microsoft csv file
         resolve_url <- paste(resolve_uri, identifier, sep="/")
+        
 
         physical <- set_physical(file_name,
                                  numHeaderLines = "1",
                                  recordDelimiter = "\\r\\n",
+                                 quoteCharacter = "\"",
                                  url = resolve_url)
 
 
