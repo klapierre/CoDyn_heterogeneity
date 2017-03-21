@@ -313,21 +313,29 @@ process_dp2 <- function() {
   eml <- add_entity_eml(eml, file_name, file_description, file_path, do1@sysmeta@identifier, cn@endpoint)
   
   # Create a DataObject to hold the script file and add it to the EML file
-  file_name <- "Analyses_and_Figures.R"
-  file_description <- "Analyses for the figures in paper"
+  file_name <- "CoDyn_Step0_BrayCurtisFuntions.R"
+  file_description <- "Rate of community change over successive time intervals"
   file_path <- sprintf("%s/%s", dataDir, file_name)
   progObj1 <- new("DataObject", format="application/R", filename=file_path,
                  mediaType="text/x-rsrc", suggestedFilename=file_name)
   eml <- add_entity_eml(eml, file_name, file_description, file_path, progObj1@sysmeta@identifier, cn@endpoint)
   
   # Create a DataObject to hold the script file and add it to the EML file
-  file_name <- "SpaceTime_generateVariables.R"
-  file_description <- "calculate variables for figure 3"
+  file_name <- "CoDyn_Step1_TestStatistics.R"
+  file_description <- "Generation of test statistics for subsequent analysis and visualization"
   file_path <- sprintf("%s/%s", dataDir, file_name)
   progObj2 <- new("DataObject", format="application/R", filename=file_path,
                  mediaType="text/x-rsrc", suggestedFilename=file_name)
   eml <- add_entity_eml(eml, file_name, file_description, file_path, progObj2@sysmeta@identifier, cn@endpoint)
 
+  # Create a DataObject to hold the script file and add it to the EML file
+  file_name <- "CoDyn_Step2_AnalysesVisuals.R"
+  file_description <- "Analysis and visualization"
+  file_path <- sprintf("%s/%s", dataDir, file_name)
+  progObj3 <- new("DataObject", format="application/R", filename=file_path,
+                  mediaType="text/x-rsrc", suggestedFilename=file_name)
+  eml <- add_entity_eml(eml, file_name, file_description, file_path, progObj3@sysmeta@identifier, cn@endpoint)
+  
   # Document and add the figure 1 to the package
   file_name <- "Fig1.jpg"
   file_description <- "Relationship between spatial heterogeneity and temporal heterogeneity in aquatic (blue) and terrestrial (green) systems."
