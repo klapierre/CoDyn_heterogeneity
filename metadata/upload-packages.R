@@ -248,6 +248,7 @@ process_dp1 <- function() {
     eml <- create_eml(title, pubDate, file_ext, keywords, dataDir)
     eml <- add_people_eml(eml, file_ext)
     eml <- add_geocoverage_eml(eml)
+    eml <- add_provenance_eml(eml)
 
     # Document and add the first data file to the package
     file_name <- "relative_cover_nceas_and_converge_12012015_long.csv"
@@ -519,6 +520,49 @@ set_geocoverage <- function(geoinforow){
                                                 northBoundingCoordinate = geoinforow[,"north"],
                                                 southBoundingCoordinate = geoinforow[,"south"])
   return(geographicCoverage)
+}
+
+add_provenance_eml <- function(eml){
+  
+  provenance_file <- paste(dataDir, "input_datasets.csv", sep = "/")
+  provenanceinfo <- read.csv(provenance_file, header = TRUE, sep = ",", colClasses = "character", quote = "\"")
+  
+  #get the original method steps
+  current_method_steps <- eml@dataset@methods@methodStep
+  #run each row through the helper function to set the provenance information
+  eml@dataset@methods@methodStep <- as(lapply(1:dim(provenanceinfo)[1], function(i)
+    set_provenance(provenanceinfo[i,])), "ListOfmethodStep")
+  
+  #add the original methodSteps back in
+  eml@dataset@methods@methodStep[length(eml@dataset@methods@methodStep)+1]<- current_method_steps
+  
+  return(eml)
+}
+
+set_provenance <- function(provenancerow){
+  
+  methodStep <- new("methodStep")
+  text1 <- "Source Dataset"
+  text2 <- "This dataset is not publicly available, the data were obtained from authors of the paper"
+  text3 <- provenancerow[,"dataset_citation"]
+  para1 <- new("para", text1)
+  para2 <- new("para", text2)
+  para3 <- new("para", text3)
+  description <- new("description")
+
+  if(provenancerow[,"dataset_url"] == "unpublished"){
+    
+    description@para <- c(para1, para2, para3)
+  }
+  
+  else {
+    
+    description@para <- c(para1, para3)
+
+  }
+  methodStep@description <- description
+ 
+  return(methodStep)
 }
 
 add_entity_eml <- function(eml, entity_name, entity_description, file_path, identifier, resolve_uri) {
