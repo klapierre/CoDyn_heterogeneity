@@ -12,6 +12,15 @@ library(grid)
 library(Hmisc)
 library(MuMIn)
 
+## Set ggplot2 theme
+theme_set(theme_bw())
+theme_update( panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+              strip.background = element_blank(),
+              text = element_text(size = 24),
+              strip.text= element_text(size = 24), 
+              axis.text = element_text(size = 14))
+
+
 #######################################################
 ## DATAFRAMES FROM CoDyn_Step1_TestStatistics.R #######
 ## Format dataframes for publication exports #########
@@ -40,7 +49,20 @@ m1 <- lmer(Temporal_heterogeneity ~ 1 +
              (Spatial_heterogeneity | site_code / project_name / community_type),
            data = dataout)
 
-
+### Make a histogram of the slopes for each site for model 1
+siteskey <- dataout %>%
+  select(site_code, System) %>%
+  unique()
+randomout <-as.data.frame(ranef(m1)$site_code) 
+randomout <- randomout %>%
+  mutate(site_code = row.names(randomout))
+randomout_forhist <- left_join(siteskey, randomout) %>%
+  mutate(System2 = "Aquatic", 
+         System2 = ifelse(System == "terrestrial", "Terrestrial", System2))
+pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial.pdf", width = 10, height = 6)
+ggplot(randomout_forhist, aes(x=Spatial_heterogeneity)) + geom_histogram() +
+   facet_wrap(~System2) + labs(x="Slope", y="Count")
+dev.off()
 # compare null and actual
 anova(m.null, m1)
 
@@ -122,6 +144,16 @@ ggplot(dat.plot,
 
 ## Model 2 using the experimental parameters
 
+m2 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity +
+             Plot_size +
+             Number_plots +
+             Spatial_extent +
+             Dataset_legnth +
+             Time_step +
+             (Spatial_heterogeneity | site_code / project_name / community_type),
+           data = dataout)
+
+# ## ONLY RANDOM INTERCEPT
 # m2 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity +
 #              Plot_size + 
 #              Number_plots + 
@@ -130,19 +162,23 @@ ggplot(dat.plot,
 #              Time_step + 
 #              (Spatial_heterogeneity | site_code / project_name / community_type),
 #            data = dataout)
-
-## ONLY RANDOM INTERCEPT
-m2 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity +
-             Plot_size + 
-             Number_plots + 
-             Spatial_extent +
-             Dataset_legnth + 
-             Time_step + 
-             (Spatial_heterogeneity | site_code / project_name / community_type),
-           data = dataout)
 summary(m2)
 ranef(m2) # Estimates for the random effects 
 fixef(m2) # Estimate (slopes) 
+
+# Think this is redundant with the graph for model 1 - LMH
+# ### Make a histogram of the slopes for each site for model 2
+# siteskey <- dataout %>%
+#   select(site_code, System) %>%
+#   unique()
+# randomout2 <-as.data.frame(ranef(m2)$site_code) 
+# randomout2 <- randomout %>%
+#   mutate(site_code = row.names(randomout))
+# randomout_forhist2 <- left_join(siteskey, randomout) %>%
+#   mutate(System2 = "Aquatic", 
+#          System2 = ifelse(System == "terrestrial", "Terrestrial", System2))
+# ggplot(randomout_forhist2, aes(x=Spatial_heterogeneity)) + geom_histogram() +
+#   facet_wrap(~System2) + labs(x="Slope", y="Count")
 
 
 # Fixed effects table
@@ -157,7 +193,21 @@ p2 <- sjp.lmer(m2, type = 'fe.std',
              title="Experimental predictors",
              y.offset=.15)
 
-## Model 3 using biological parameters about the site
+# Model 3 using biological parameters about the site
+m3 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity +
+             #taxa  + #confounded with lifespan and system
+             Lifespan +
+             MAP+
+             #ANPP+ #dropping this b/c have missing data
+             MAT+
+             Successional +
+             Trophic_level +
+             System +
+             #system:dispersion +
+             (Spatial_heterogeneity | site_code / project_name / community_type),
+           data = dataout)
+# 
+# ## ONLY RANDOM INTERCEPT
 # m3 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity + 
 #              #taxa  + #confounded with lifespan and system
 #              Lifespan + 
@@ -168,22 +218,8 @@ p2 <- sjp.lmer(m2, type = 'fe.std',
 #              Trophic_level +
 #              System +
 #              #system:dispersion +
-#              (Spatial_heterogeneity | site_code / project_name / community_type),
+#              (1 | site_code / project_name / community_type),
 #            data = dataout)
-
-## ONLY RANDOM INTERCEPT
-m3 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity + 
-             #taxa  + #confounded with lifespan and system
-             Lifespan + 
-             MAP+
-             #ANPP+ #dropping this b/c have missing data
-             MAT+
-             Successional +
-             Trophic_level +
-             System +
-             #system:dispersion +
-             (1 | site_code / project_name / community_type),
-           data = dataout)
 summary(m3)
 ranef(m3) # Estimates for the random effects 
 fixef(m3) # Estimate (slopes) 
@@ -217,13 +253,6 @@ grid.arrange(p2$plot, p3$plot, ncol=2, left=textGrob("Predictors of temporal het
 ### MAKE FIGURE 3 #####
 #######################
 
-## Set ggplot2 theme
-theme_set(theme_bw())
-theme_update( panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-              strip.background = element_blank(),
-              text = element_text(size = 24),
-              strip.text= element_text(size = 24), 
-              axis.text = element_text(size = 14))
 
 # Double check the cut-off point (ie, minimum length of dataset)
 dataout %>%
@@ -270,13 +299,8 @@ m_subannual <- lme(distance ~  dispersion*facinterval,
           data = subset(rateout2, lifespan2 == "Subannual"))
 summary(m_subannual)
 
-m_subannual <- lme(distance ~  dispersion*facinterval, 
-                   random =  ~1+facinterval|site_code / project_name / community_type, 
-                   data = subset(rateout2, lifespan2 == "Subannual"))
-summary(m_subannual)
 
 
-(value~time,random=~1+time|subject
 # mixed effect model to look at the interaction within annual
 m_annual <- lme(distance ~  dispersion*facinterval, 
          random =  ~1|site_code / project_name / community_type, 
