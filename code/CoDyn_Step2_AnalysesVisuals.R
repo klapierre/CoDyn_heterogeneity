@@ -113,7 +113,7 @@ dat.plot <- dataout
 dat.plot$System <- Hmisc::capitalize(as.character(dat.plot$System))
 
 ## Create the plot
-#pdf("Fig1.pdf", width=7, height=6)
+pdf("Fig1_aquaticvsterrestrial.pdf", width=7, height=6)
 
 ggplot(dat.plot,
        aes(x = Spatial_heterogeneity, 
@@ -122,6 +122,7 @@ ggplot(dat.plot,
   xlab("Spatial heterogeneity") + ylab("Temporal heterogeneity") +
   geom_point(alpha = .25, shape = 1, alpha=0.5) +
   scale_color_manual(values=c("blue","darkgreen"))+
+   geom_smooth(method = "lm", se =F) + 
   geom_line(data = d.lines2,
             aes(y = y.pred, 
                 x = dispersion,
@@ -136,7 +137,7 @@ ggplot(dat.plot,
   theme(panel.grid.major=element_blank())+
   theme(panel.grid.minor=element_blank())
 
-#dev.off()
+dev.off()
 
 ###########################
 ########Models 2 and 3 ####
