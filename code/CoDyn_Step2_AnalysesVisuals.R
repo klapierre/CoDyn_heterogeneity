@@ -59,10 +59,10 @@ randomout <- randomout %>%
 randomout_forhist <- left_join(siteskey, randomout) %>%
   mutate(System2 = "Aquatic", 
          System2 = ifelse(System == "terrestrial", "Terrestrial", System2))
-pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial.pdf", width = 10, height = 6)
+#pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial.pdf", width = 10, height = 6)
 ggplot(randomout_forhist, aes(x=Spatial_heterogeneity)) + geom_histogram() +
    facet_wrap(~System2) + labs(x="Slope", y="Count")
-dev.off()
+#dev.off()
 # compare null and actual
 anova(m.null, m1)
 
@@ -113,8 +113,7 @@ dat.plot <- dataout
 dat.plot$System <- Hmisc::capitalize(as.character(dat.plot$System))
 
 ## Create the plot
-pdf("Fig1_aquaticvsterrestrial.pdf", width=7, height=6)
-
+#pdf("Fig1_aquaticvsterrestrial.pdf", width=7, height=6)
 ggplot(dat.plot,
        aes(x = Spatial_heterogeneity, 
            y = Temporal_heterogeneity,
@@ -136,8 +135,7 @@ ggplot(dat.plot,
   coord_equal()+
   theme(panel.grid.major=element_blank())+
   theme(panel.grid.minor=element_blank())
-
-dev.off()
+#dev.off()
 
 ###########################
 ########Models 2 and 3 ####
