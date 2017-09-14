@@ -145,9 +145,9 @@ ggplot(dat.plot,
 ## Model 2 using the experimental parameters
 
 m2 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity +
-             Plot_size +
+             log(Plot_size) +
              Number_plots +
-             Spatial_extent +
+             log(Spatial_extent) +
              Dataset_legnth +
              Time_step +
              (Spatial_heterogeneity | site_code / project_name / community_type),
