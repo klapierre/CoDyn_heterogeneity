@@ -121,3 +121,10 @@ alldat<-merge(codyndat_diversity, codyndat_info, by="site_project_comm")%>%
 
 ggplot(data=alldat, aes(x=S, y=E_Q, color=site_project_comm))+
   geom_point()
+
+###looking at spatail-temporal relationship
+dataout <- read.csv('C:\\Users\\megha\\Dropbox\\CoDyn\\R Files\\11_06_2015_v7\\SpatioTemp_testStatistics_20170208.csv')%>%
+  mutate(color=as.factor(ifelse(site_code=="MISS",1,0)))
+
+ggplot(data=dataout, aes(x=spatialdispersion, y=temporaldistance, color=color))+
+  geom_point()
