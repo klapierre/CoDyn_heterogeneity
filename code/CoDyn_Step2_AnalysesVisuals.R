@@ -49,21 +49,23 @@ m1 <- lmer(Temporal_heterogeneity ~ 1 +
              (Spatial_heterogeneity | site_code / project_name / community_type),
            data = dataout)
 
+
 ### Make a histogram of the slopes for each site for model 1
 siteskey <- dataout %>%
-  select(site_code, project_name, System) %>%
+  select(site_code, project_name, community_type, System) %>%
   unique() %>%
-  mutate(site_project = paste(project_name, site_code, sep = ":"))
-randomout <-as.data.frame(ranef(m1)$project_name)
+  mutate(site_project = paste(community_type, project_name, site_code,  sep = ":"))
+randomout <-as.data.frame(ranef(m1)$community_type)
 randomout <- randomout %>%
   mutate(site_project = row.names(randomout))
 randomout_forhist <- left_join(siteskey, randomout) %>%
   mutate(System2 = "Aquatic",
          System2 = ifelse(System == "terrestrial", "Terrestrial", System2))
-#pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial_m1.pdf", width = 10, height = 6)
+#pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial_m1_v2.pdf", width = 10, height = 6)
 ggplot(randomout_forhist, aes(x=Spatial_heterogeneity)) + geom_histogram() +
-   facet_wrap(~System2) + labs(x="Slope", y="Count")
+  facet_wrap(~System2) + labs(x="Slope", y="Count")
 #dev.off()
+
 # compare null and actual
 anova(m.null, m1)
 
@@ -145,9 +147,9 @@ ggplot(dat.plot,
 ## Model 2 using the experimental parameters
 
 m2 <- lmer(Temporal_heterogeneity ~ Spatial_heterogeneity +
-             log(Plot_size) +
+             Plot_size +
              Number_plots +
-             log(Spatial_extent) +
+             Spatial_extent +
              Dataset_legnth +
              Time_step +
              (Spatial_heterogeneity | site_code / project_name / community_type),
@@ -238,19 +240,19 @@ p3<-sjp.lmer(m3, type = 'fe.std',
 
 ### Make a histogram of the slopes for each site for model 3
 siteskey <- dataout %>%
-  select(site_code, project_name, System) %>%
+  select(site_code, project_name, community_type, System) %>%
   unique() %>%
-  mutate(site_project = paste(project_name, site_code, sep = ":"))
-randomout3 <-as.data.frame(ranef(m3)$project_name)
+  mutate(site_project = paste(community_type,project_name, site_code, sep = ":"))
+randomout3 <-as.data.frame(ranef(m3)$community_type)
 randomout3 <- randomout3 %>%
   mutate(site_project = row.names(randomout3))
 randomout_forhist3 <- left_join(siteskey, randomout3) %>%
   mutate(System2 = "Aquatic",
          System2 = ifelse(System == "terrestrial", "Terrestrial", System2))
-#pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial_m3.pdf", width = 10, height = 6)
+pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial_m3_v2.pdf", width = 10, height = 6)
 ggplot(randomout_forhist3, aes(x=Spatial_heterogeneity)) + geom_histogram() +
   facet_wrap(~System2) + labs(x="Slope", y="Count")
-#dev.off()
+dev.off()
 
 #################################################
 #### Models 2 and 3 graphics to make Figure 2 ###
