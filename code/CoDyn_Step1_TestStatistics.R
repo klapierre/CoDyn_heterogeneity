@@ -54,6 +54,7 @@ key <- read.csv("siteinfo_key.csv") %>%
 #### DIVERSITY METRICS ###########################################
 ### Calculate diversity metrics within a site/project and year ###
 spatial_diversity <- dat %>%
+  tbl_df() %>%
   # summarize data at the site/project level
   group_by(site_code, site_project_comm, experiment_year, species) %>%
   summarize(abundance = mean(abundance)) %>%
@@ -117,7 +118,7 @@ spatial_means <- dat %>%
   summarize(abundance = mean(abundance)) 
 
 ## Calculate Bray Curtis between plots over successive time intervals
-source("CoDyn_Step0_BrayCurtisFuntions.R")
+#source("CoDyn_Step0_BrayCurtisFuntions.R")
 
 rate_interval_out_BC <- rate_change_interval_BC(spatial_means, "experiment_year", "species", "abundance", "site_project_comm") %>%
   tbl_df() %>%

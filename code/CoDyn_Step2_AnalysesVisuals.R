@@ -61,9 +61,10 @@ randomout <- randomout %>%
 randomout_forhist <- left_join(siteskey, randomout) %>%
   mutate(System2 = "Aquatic",
          System2 = ifelse(System == "terrestrial", "Terrestrial", System2))
-#pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial_m1_v2.pdf", width = 10, height = 6)
-ggplot(randomout_forhist, aes(x=Spatial_heterogeneity)) + geom_histogram() +
-  facet_wrap(~System2) + labs(x="Slope", y="Count")
+#pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial_m1_v2_color.pdf", width = 10, height = 6)
+ggplot(randomout_forhist, aes(x=Spatial_heterogeneity)) + geom_histogram(aes(fill=System2)) +
+  facet_wrap(~System2) + labs(x="Slope", y="Count") + scale_fill_manual(values=c("blue", "darkgreen")) +
+  theme(legend.position = "none")
 #dev.off()
 
 # compare null and actual
@@ -179,9 +180,10 @@ randomout2 <- randomout2 %>%
 randomout_forhist2 <- left_join(siteskey, randomout2) %>%
   mutate(System2 = "Aquatic",
          System2 = ifelse(System == "terrestrial", "Terrestrial", System2))
-#pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial_m2.pdf", width = 10, height = 6)
-ggplot(randomout_forhist2, aes(x=Spatial_heterogeneity)) + geom_histogram() +
-  facet_wrap(~System2) + labs(x="Slope", y="Count")
+#pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial_m2_color.pdf", width = 10, height = 6)
+ggplot(randomout_forhist2, aes(x=Spatial_heterogeneity)) + geom_histogram(aes(fill=System2)) +
+  facet_wrap(~System2) + labs(x="Slope", y="Count") + scale_fill_manual(values=c("blue", "darkgreen")) +
+  theme(legend.position = "none")
 #dev.off()
 
 # Fixed effects table
@@ -249,10 +251,10 @@ randomout3 <- randomout3 %>%
 randomout_forhist3 <- left_join(siteskey, randomout3) %>%
   mutate(System2 = "Aquatic",
          System2 = ifelse(System == "terrestrial", "Terrestrial", System2))
-pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial_m3_v2.pdf", width = 10, height = 6)
+#pdf("CoDyn_randomeffect_slopes_aquaticvterrestrial_m3_v2.pdf", width = 10, height = 6)
 ggplot(randomout_forhist3, aes(x=Spatial_heterogeneity)) + geom_histogram() +
   facet_wrap(~System2) + labs(x="Slope", y="Count")
-dev.off()
+#dev.off()
 
 #################################################
 #### Models 2 and 3 graphics to make Figure 2 ###
@@ -297,10 +299,11 @@ b <- ggplot(rateout2, aes(x=dispersion, y=distance, group=interval)) +
   scale_color_continuous(high = "coral", low = "turquoise", limits = c(1,6)) #+ 
 
 #pdf("Figure3_Rout.pdf", width = 12, height = 8)
-grid.arrange(a + xlab("") + theme(axis.text.x=element_blank())  ,
-             b + theme(strip.text = element_blank()), 
-             left = textGrob("Temporal heterogeneity", rot=90, gp=gpar(fontsize = 24), vjust =1.5))
-#dev.off()
+pdf("Figure3_Rout_v2.pdf", width = 8, height = 6)
+grid.arrange(a + xlab("") + theme(axis.text.x=element_blank(), text = element_text(size = 10), strip.text = element_text(size = 14))  ,
+             b + theme(strip.text = element_blank(), text = element_text(size = 10), axis.title.x = element_text(size = 18,color="black")), 
+             left = textGrob("Temporal heterogeneity", rot=90, gp=gpar(fontsize = 18), vjust =1.5))
+dev.off()
 
 ### Notes: Labeled panels and cleaned up legend offline
 
