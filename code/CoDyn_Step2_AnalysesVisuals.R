@@ -300,8 +300,9 @@ b <- ggplot(rateout2, aes(x=dispersion, y=distance, group=interval)) +
 
 #pdf("Figure3_Rout.pdf", width = 12, height = 8)
 pdf("Figure3_Rout_v2.pdf", width = 8, height = 6)
-grid.arrange(a + xlab("") + theme(axis.text.x=element_blank(), text = element_text(size = 10), strip.text = element_text(size = 14))  ,
-             b + theme(strip.text = element_blank(), text = element_text(size = 10), axis.title.x = element_text(size = 18,color="black")), 
+grid.arrange(a + xlab("") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x=element_blank(), text = element_text(size = 10), 
+                                  strip.text = element_text(size = 16, color = "black"), strip.background = element_blank())  ,
+             b + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.text = element_blank(), text = element_text(size = 10), axis.title.x = element_text(size = 18,color="black")), 
              left = textGrob("Temporal heterogeneity", rot=90, gp=gpar(fontsize = 18), vjust =1.5))
 dev.off()
 
